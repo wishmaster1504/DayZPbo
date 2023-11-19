@@ -10,6 +10,8 @@ class MissionBase extends MissionBaseWorld
 	
 	ref array<PlayerBase> m_DummyPlayers = new array<PlayerBase>;
 
+	autoptr ObjectSnapCallback m_InventoryDropCallback;
+
 	void MissionBase()
 	{
 		SetDispatcher(new DispatcherCaller);
@@ -17,6 +19,8 @@ class MissionBase extends MissionBaseWorld
 		PluginManagerInit();
 
 		m_WidgetEventHandler = new WidgetEventHandler;
+
+		m_InventoryDropCallback = new EntityPlacementCallback;
 		
 		//Debug.DestroyAllShapes();
 
@@ -51,6 +55,11 @@ class MissionBase extends MissionBaseWorld
 			GetDayZGame().GetAnalyticsClient().UnregisterEvents();	
 		}
 		TriggerEffectManager.DestroyInstance();
+	}
+
+	override ObjectSnapCallback GetInventoryDropCallback()
+	{
+		return m_InventoryDropCallback;
 	}
 	
 	void InitialiseWorldData()
@@ -135,6 +144,9 @@ class MissionBase extends MissionBaseWorld
 		case MENU_SCRIPTCONSOLE_DIALOG_PRESET_RENAME:
 			menu = new ScriptConsoleRenamePresetDialog;
 			break;
+		case MENU_SCRIPTCONSOLE_UNIVERSAL_INFO_DIALOG:
+			menu = new ScriptConsoleUniversalInfoDialog;
+			break;
 		case MENU_CHAT_INPUT:
 			menu = new ChatInputMenu;
 			break;
@@ -215,6 +227,9 @@ class MissionBase extends MissionBaseWorld
 			break;
 		case MENU_LOC_ADD:
 			menu = new ScriptConsoleAddLocation;
+			break;	
+		case MENU_MISSION_LOADER:
+			menu = new MissionLoader;
 			break;
 		}
 
@@ -226,23 +241,12 @@ class MissionBase extends MissionBaseWorld
 		return menu;
 	}
 
-	override UIScriptedWindow CreateScriptedWindow(int id)
-	{
-		UIScriptedWindow window = NULL;
-
-		switch (id)
-		{
-		case GUI_WINDOW_MISSION_LOADER:
-			window = new MissionLoader( GUI_WINDOW_MISSION_LOADER );
-			break;
-		}
-
-		return window;
-	}
-
 	void SpawnItems();
 	
-	void UpdateInputDevicesAvailability();
+	void UpdateInputDevicesAvailability()
+	{
+		g_Game.RefreshMouseCursorVisibility();
+	}
 
 	override void OnKeyPress(int key)
 	{
@@ -393,6 +397,28 @@ class MissionBase extends MissionBaseWorld
 		m_DummyPlayers.Insert(PlayerBase.Cast( player ));
 	}
 
+#ifdef DIAG_DEVELOPER
+	void UpdateInputDeviceDiag()
+	{
+		DisplayInputDebug(DiagMenu.GetBool(DiagMenuIDs.MISC_INPUT_DEVICE_DISCONNECT_DBG));
+	}
+	
+	void DisplayInputDebug(bool show)
+	{
+		DbgUI.BeginCleanupScope();     
+		DbgUI.Begin("InputDeviceDebug", 60, 60);
+		
+		if (show)
+		{
+			DbgUI.Text("Gamepad: " + g_Game.GetInput().IsActiveGamepadSelected());
+			DbgUI.Text("Mouse: " + g_Game.GetInput().IsMouseConnected());
+			DbgUI.Text("Keyboard: " + g_Game.GetInput().IsKeyboardConnected());
+		}
+		
+		DbgUI.End();
+		DbgUI.EndCleanupScope();
+	}
+#endif
 }
 
 class MissionDummy extends MissionBase

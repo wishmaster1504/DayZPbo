@@ -19,6 +19,11 @@
 #define BULDOZER
 
 /*!
+	\brief Enabled when script is compiled for Workbench
+*/
+#define WORKBENCH
+
+/*!
 	\note Present for server builds
 */
 #define NO_GUI
@@ -27,6 +32,11 @@
 	\note Present for server builds
 */
 #define NO_GUI_INGAME
+
+/*!
+	\note Work in progress feature flag to prevent cursor from being hijacked by the game. Original intention was only DEVELOPER_DIAG but the fix later introduced problems in retail.
+*/
+#define FEATURE_CURSOR
 
 
 

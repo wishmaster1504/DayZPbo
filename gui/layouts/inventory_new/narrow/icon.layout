@@ -218,7 +218,7 @@ FrameWidgetClass Icon {
    }
   }
   PanelWidgetClass Selected {
-   visible 1
+   visible 0
    clipchildren 0
    ignorepointer 1
    position 0 0
@@ -286,6 +286,22 @@ FrameWidgetClass Icon {
      stretch 0
     }
    }
+  }
+  PanelWidgetClass Cursor {
+   visible 0
+   clipchildren 0
+   ignorepointer 1
+   position 0 0
+   size 1 1
+   halign center_ref
+   valign center_ref
+   hexactpos 1
+   vexactpos 1
+   hexactsize 0
+   vexactsize 0
+   priority 999
+   draggable 0
+   style Outline
   }
  }
 }

@@ -1,0 +1,11 @@
+Particle {
+ AlbedoMap "{A1FBE8036C696DCA}Graphics/Particles/sprites/Fireworks_ThankYou_cont.edds" alpha 
+ Color 0 0 0 1
+ Ambient 0 0 0 1
+ Emissive 1 1 1 0
+ Sort translucent
+ BlendMode Additive_AlphaModulate
+ TileV 4
+ Softness 0.5
+ CameraBlendFar 0.001
+}

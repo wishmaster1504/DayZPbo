@@ -84,6 +84,7 @@ class WeaponChambering_Base extends WeaponStateBase
 
 class WeaponChambering_Cartridge extends WeaponChambering_Base
 {
+	override bool IsWaitingForActionFinish () { return true; }
 	override void OnEntry (WeaponEventBase e)
 	{
 		super.OnEntry(e);
@@ -97,7 +98,9 @@ class WeaponChambering_Cartridge extends WeaponChambering_Base
 				{
 					if (LogManager.IsWeaponLogEnable()) { wpnDebugPrint("[wpnfsm] " + Object.GetDebugName(m_weapon) + " WeaponChambering_Cartridge, ok - cartridge acquired: dmg=" + m_damage + " type=" + m_type); }
 					m_weapon.SelectionBulletShow();
+					m_weapon.ShowBullet(m_weapon.GetCurrentMuzzle());
 					m_weapon.EffectBulletShow( m_weapon.GetCurrentMuzzle(), m_damage, m_type);
+					m_weapon.SetWeaponOpen(false);
 				}
 				else
 					Error("[wpnfsm] " + Object.GetDebugName(m_weapon) + " WeaponChambering_Cartridge, error - cannot take cartridge from magazine");
@@ -150,6 +153,7 @@ class WeaponChambering_Cartridge extends WeaponChambering_Base
 		else
 			if (LogManager.IsWeaponLogEnable()) { wpnDebugPrint("[wpnfsm] " + Object.GetDebugName(m_weapon) + " WeaponChambering_Cartridge, error - cannot load chamber chamber!"); }
 
+		m_weapon.SetCharged(true);
 		m_magazineType = string.Empty;
 		m_type = string.Empty;
 		super.OnExit(e);
@@ -174,6 +178,8 @@ class WeaponChambering_Cartridge_ChambToMag extends WeaponChambering_Cartridge
 			else
 				if (LogManager.IsWeaponLogEnable()) { wpnDebugPrint("[wpnfsm] " + Object.GetDebugName(m_weapon) + " WeaponChambering_Cartridge, error - cannot load chamber chamber!"); }
 		}
+		
+		m_weapon.SetWeaponOpen(false);
 		super.OnExit(e);
 	}
 }
@@ -375,6 +381,7 @@ class WeaponChambering extends WeaponStateBase
 	ref WeaponEjectCasing m_eject;
 	ref WeaponChambering_Cartridge m_chamber;
 	ref WeaponChambering_W4T m_w4t;
+	ref WeaponCharging_CK m_onCK;
 
 	void WeaponChambering (Weapon_Base w = NULL, WeaponStateBase parent = NULL, WeaponActions action = WeaponActions.NONE, int actionType = -1)
 	{
@@ -386,16 +393,21 @@ class WeaponChambering extends WeaponStateBase
 		m_chamber = new WeaponChambering_Cartridge(m_weapon, this);
 		m_w4t = new WeaponChambering_W4T(m_weapon, this);
 		m_eject = new WeaponEjectCasing(m_weapon, this);
+		m_onCK = new WeaponCharging_CK(m_weapon, this);
 		// events
 		WeaponEventBase _fin_ = new WeaponEventHumanCommandActionFinished;
 		WeaponEventAnimBulletInChamber __bc_ = new WeaponEventAnimBulletInChamber;
 		WeaponEventAnimBulletShow  __bs_ = new WeaponEventAnimBulletShow;
 		WeaponEventAnimBulletEject	__be_ = new WeaponEventAnimBulletEject;
+		WeaponEventAnimCocked __ck_ = new WeaponEventAnimCocked;
 
 		m_fsm = new WeaponFSM(this); // @NOTE: set owner of the submachine fsm
 		m_fsm.AddTransition(new WeaponTransition(m_start  , __be_, m_eject));
-		m_fsm.AddTransition(new WeaponTransition(m_start  , __bs_, m_chamber));			
-		m_fsm.AddTransition(new WeaponTransition(m_eject  , __bs_, m_chamber));		
+		m_fsm.AddTransition(new WeaponTransition(m_start  , __ck_, m_onCK));
+		m_fsm.AddTransition(new WeaponTransition(m_start  , __bs_, m_chamber));
+		m_fsm.AddTransition(new WeaponTransition(m_onCK  , __be_, m_eject));
+		m_fsm.AddTransition(new WeaponTransition(m_onCK  , __bs_, m_chamber));	
+		m_fsm.AddTransition(new WeaponTransition(m_eject  , __bs_, m_chamber));
 		m_fsm.AddTransition(new WeaponTransition(m_chamber, __bc_, m_w4t));
 		m_fsm.AddTransition(new WeaponTransition(m_w4t    , _fin_, null));
 		
@@ -966,7 +978,7 @@ class WeaponMagnumChambering extends WeaponStateBase
 		m_fsm.AddTransition(new WeaponTransition(m_eject, __bs_, m_chamber));
 		m_fsm.AddTransition(new WeaponTransition(m_rotate, __bs_, m_chamber));		
 		
-		m_fsm.AddTransition(new WeaponTransition(m_chamber, __bM_, m_w4sb2, null, new GuardAnd(new GuardAnd(new WeaponGuardHasAmmoInLoopedState(m_chamber), new WeaponGuardChamberMultiHasRoomBulltetIgnoreLast(m_weapon)),new WeaponGuardWeaponManagerWantContinue())));
+		m_fsm.AddTransition(new WeaponTransition(m_chamber, __bM_, m_w4sb2, null, new GuardAnd(new GuardAnd(new WeaponGuardHasAmmoInLoopedState(m_chamber), new WeaponGuardChamberMultiHasRoomBulltet(m_weapon)),new WeaponGuardWeaponManagerWantContinue())));
 		m_fsm.AddTransition(new WeaponTransition(m_chamber, __bM_, m_endLoop));
 		//m_fsm.AddTransition(new WeaponTransition(m_rotate, __bh_, m_chamber));
 		//m_fsm.AddTransition(new WeaponTransition(m_w4sb2, 	__bh_, m_hideB));

@@ -123,8 +123,8 @@ ButtonWidgetClass server_browser_list_entry_root {
        image0 "set:ccgui_enforce image:HudRepair"
        mode additive
        "src alpha" 1
-       "no wrap" 1
-       stretch 1
+       "clamp mode" clamp
+       "stretch mode" stretch_w_h
        filter 1
        {
         ImageWidgetClass Owned {
@@ -143,8 +143,8 @@ ButtonWidgetClass server_browser_list_entry_root {
          image0 "set:dayz_gui image:circle"
          mode blend
          "src alpha" 1
-         "no wrap" 1
-         stretch 1
+         "clamp mode" clamp
+         "stretch mode" stretch_w_h
         }
         ImageWidgetClass Unowned {
          visible 0
@@ -162,8 +162,8 @@ ButtonWidgetClass server_browser_list_entry_root {
          image0 "set:dayz_gui image:circle"
          mode blend
          "src alpha" 1
-         "no wrap" 1
-         stretch 1
+         "clamp mode" clamp
+         "stretch mode" stretch_w_h
         }
        }
       }
@@ -224,10 +224,10 @@ ButtonWidgetClass server_browser_list_entry_root {
      }
     }
     FrameWidgetClass server_time_panel {
-     visible 0
+     visible 1
      ignorepointer 1
      position 0 0
-     size 30 30
+     size 95 30
      hexactpos 1
      vexactpos 1
      hexactsize 1
@@ -305,7 +305,7 @@ ButtonWidgetClass server_browser_list_entry_root {
      }
     }
     FrameWidgetClass server_slots_panel {
-     visible 1
+     visible 0
      ignorepointer 1
      size 102 30
      valign center_ref

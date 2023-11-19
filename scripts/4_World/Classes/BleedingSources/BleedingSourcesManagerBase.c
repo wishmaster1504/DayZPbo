@@ -76,21 +76,31 @@ class BleedingSourcesManagerBase
 	//for inventory location, get the active bits
 	int GetBleedingSourceBitsByInvLocation(int inv_location)
 	{
-		if(m_BleedingSourcesByLocation.Contains(inv_location))
+		if (m_BleedingSourcesByLocation.Contains(inv_location))
 		{
 			return m_BleedingSourcesByLocation.Get(inv_location);
 		}
+
 		return 0;
 	}
 
 	//for inventory location, get the active bits
 	int GetFreeBleedingSourceBitsByInvLocation(int inv_location)
 	{
-		if(m_BleedingSourcesZonesMaskByLocation.Contains(inv_location))
+		if (m_BleedingSourcesZonesMaskByLocation.Contains(inv_location))
 		{
 			return (~m_BleedingSourcesZonesMaskByLocation.Get(inv_location) & GetBleedingSourceBitsByInvLocation(inv_location)) | (m_BleedingSourcesZonesMaskByLocation.Get(inv_location) & ~GetBleedingSourceBitsByInvLocation(inv_location));//xor
 		}
+
 		return 0;
+	}
+	
+	bool IsBleedingSourceActive(string name)
+	{
+		name.ToLower();
+		int bit = GetBitFromSelectionName(name);
+
+		return m_Player.GetBleedingBits() & bit;
 	}
 	
 	
@@ -195,7 +205,6 @@ class BleedingSourcesManagerBase
 			AddBleedingSource(bit);
 			return true;
 		}
-		
 		return false;
 	}
 	
@@ -231,8 +240,15 @@ class BleedingSourcesManagerBase
 	
 	protected bool CanAddBleedingSource(int bit)
 	{
-		if (!GetBleedingSourceMeta(bit)) return false;
-		return ((m_Player.GetBleedingBits() & bit) == 0 );
+		if (!GetBleedingSourceMeta(bit)) 
+		{
+			return false;
+		}
+		if ((m_Player.GetBleedingBits() & bit) == 0)
+		{
+			return true;
+		}
+		return false;
 	}
 	
 	protected void AddBleedingSourceEx(int bit, eBleedingSourceType type = eBleedingSourceType.NORMAL, int context = 0)
@@ -244,7 +260,6 @@ class BleedingSourcesManagerBase
 	protected void AddBleedingSource(int bit)
 	{
 		BleedingSourceZone bsz = GetBleedingSourceMeta(bit);
-		
 		vector orientation = bsz.GetOrientation();
 		vector offset = bsz.GetOffset();
 		string bone_name =  bsz.GetBoneName();
@@ -254,8 +269,6 @@ class BleedingSourcesManagerBase
 		int inventory_loc = bsz.GetInvLocation();
 		m_BleedingSourcesByLocation.Set(inventory_loc, (m_BleedingSourcesByLocation.Get(inventory_loc) | bit));
 		m_BleedingSources.Insert(bit, new BleedingSource(m_Player, bit,bone_name, orientation, offset, max_time, flow_modifier, particle_name) );
-		
-		m_Player.OnBleedingSourceAdded();
 	}
 	
 	int GetBleedingSourceActiveTime(int bit)
@@ -300,7 +313,6 @@ class BleedingSourcesManagerBase
 			int inventory_loc = bsz.GetInvLocation();
 			m_BleedingSourcesByLocation.Set(inventory_loc, (m_BleedingSourcesByLocation.Get(inventory_loc) & ~bit));//deactivate the bit
 			m_BleedingSources.Remove(bit);
-			m_Player.OnBleedingSourceRemovedEx(m_Item);
 			return true;
 		}
 		return false;

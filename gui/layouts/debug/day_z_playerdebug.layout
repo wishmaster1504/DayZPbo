@@ -7,7 +7,6 @@ FrameWidgetClass FrameWidget {
   FrameWidgetClass PlayerDebugMainWnd {
    visible 1
    clipchildren 0
-   color 1 1 1 1
    position 0 0
    size 0.25 1
    halign right_ref
@@ -17,93 +16,12 @@ FrameWidgetClass FrameWidget {
    vexactsize 0
    priority 50
    {
-    ImageWidgetClass Background {
-     color 0 0 0 0.9882
-     position 0 -0.0007
-     size 1 1
-     hexactpos 0
-     vexactpos 0
-     hexactsize 0
-     vexactsize 0
-     imageTexture "{68AE58E5E99FB598}Gui/textures/left_pane_full_ca.edds"
-     mode blend
-     "src alpha" 1
-     stretch 1
-     {
-      EditBoxWidgetClass PlayerStatusV {
-       position 0.011 0.021
-       size 0.97693 0.01432
-       hexactpos 0
-       vexactpos 0
-       hexactsize 0
-       vexactsize 0
-       text "Test"
-       font "gui/fonts/etelkatextpro"
-      }
-      TextWidgetClass PlayerStatusT {
-       position 0.008 0.002
-       size 0.97486 0.018
-       hexactpos 0
-       vexactpos 0
-       hexactsize 0
-       vexactsize 0
-       text "Player Status"
-       font "gui/fonts/etelkatextpro"
-      }
-      ButtonWidgetClass Card0Button {
-       position 0.043 0.042
-       size 0.271 0.024
-       hexactpos 0
-       vexactpos 0
-       hexactsize 0
-       vexactsize 0
-       text "Actions"
-      }
-      ButtonWidgetClass Card1Button {
-       position 0.321 0.042
-       size 0.367 0.024
-       hexactpos 0
-       vexactpos 0
-       hexactsize 0
-       vexactsize 0
-       text "Weapons"
-      }
-      ButtonWidgetClass Card2Button {
-       position 0.69531 0.04191
-       size 0.26089 0.024
-       hexactpos 0
-       vexactpos 0
-       hexactsize 0
-       vexactsize 0
-       text "Ctrl"
-      }
-      ButtonWidgetClass Card3Button {
-       position 0.04232 0.06754
-       size 0.34606 0.024
-       hexactpos 0
-       vexactpos 0
-       hexactsize 0
-       vexactsize 0
-       text "Other Cmds"
-      }
-      ButtonWidgetClass Card4Button {
-       visible 0
-       position 0.31847 0.06751
-       size 0.37035 0.024
-       hexactpos 0
-       vexactpos 0
-       hexactsize 0
-       vexactsize 0
-       text "Unconscious"
-      }
-     }
-    }
     FrameWidgetClass Card0 {
-     visible 0
+     visible 1
      clipchildren 0
      color 0.1098 0.1098 1 1
-     position 0.02 0.0929
-     size 0.96 0.92269
+     position -0.08963 0.0929
+     size 1.06963 0.92269
      halign left
      valign top
      hexactpos 0
@@ -122,16 +40,26 @@ FrameWidgetClass FrameWidget {
        style editor_quad_dark
        {
         TextListboxWidgetClass ActionsSelector {
+         clipchildren 1
          position 0.011 0.15219
          size 0.977 0.73388
          hexactpos 0
          vexactpos 0
          hexactsize 0
          vexactsize 0
+         style Default
+         "next left" ""
+         "next right" ""
+         "next up" ""
+         "next down" ""
+         "title visible" 1
+         colums "name;50;type;60"
+         lines 6
+         "highlight row" 0
          font "gui/fonts/etelkatextpro14"
         }
         TextWidgetClass ActionsText {
-         position 0.011 0.069
+         position 0.00819 0.04398
          size 0.775 0.033
          hexactpos 0
          vexactpos 0
@@ -246,8 +174,8 @@ FrameWidgetClass FrameWidget {
         }
         ButtonWidgetClass ActionsGroupLA {
          color 0.5765 0.5765 0.5765 1
-         position 0.02804 0.12087
-         size 0.10541 0.0255
+         position 0.148 0.1209
+         size 0.09 0.0255
          hexactpos 0
          vexactpos 0
          hexactsize 0
@@ -257,8 +185,8 @@ FrameWidgetClass FrameWidget {
         }
         ButtonWidgetClass ActionsGroupOA {
          color 0.5765 0.5765 0.5765 1
-         position 0.14469 0.12087
-         size 0.10541 0.0255
+         position 0.2547 0.1209
+         size 0.09 0.0255
          hexactpos 0
          vexactpos 0
          hexactsize 0
@@ -268,8 +196,8 @@ FrameWidgetClass FrameWidget {
         }
         ButtonWidgetClass ActionsGroupFLA {
          color 0.5765 0.5765 0.5765 1
-         position 0.26551 0.12087
-         size 0.10541 0.0255
+         position 0.3555 0.1209
+         size 0.09 0.0255
          hexactpos 0
          vexactpos 0
          hexactsize 0
@@ -279,8 +207,8 @@ FrameWidgetClass FrameWidget {
         }
         ButtonWidgetClass ActionsGroupFOA {
          color 0.5765 0.5765 0.5765 1
-         position 0.38216 0.12087
-         size 0.10541 0.0255
+         position 0.4622 0.1209
+         size 0.09 0.0255
          hexactpos 0
          vexactpos 0
          hexactsize 0
@@ -290,8 +218,8 @@ FrameWidgetClass FrameWidget {
         }
         ButtonWidgetClass ActionsGroupLG {
          color 0.5765 0.5765 0.5765 1
-         position 0.50297 0.12087
-         size 0.10541 0.0255
+         position 0.563 0.1209
+         size 0.09 0.0255
          hexactpos 0
          vexactpos 0
          hexactsize 0
@@ -301,8 +229,8 @@ FrameWidgetClass FrameWidget {
         }
         ButtonWidgetClass ActionsGroupOG {
          color 0.5765 0.5765 0.5765 1
-         position 0.61962 0.12087
-         size 0.10541 0.0255
+         position 0.6696 0.1209
+         size 0.09 0.0255
          hexactpos 0
          vexactpos 0
          hexactsize 0
@@ -312,8 +240,8 @@ FrameWidgetClass FrameWidget {
         }
         ButtonWidgetClass ActionsGroupFLG {
          color 0.5765 0.5765 0.5765 1
-         position 0.74044 0.12087
-         size 0.10541 0.0255
+         position 0.7804 0.1209
+         size 0.09 0.0255
          hexactpos 0
          vexactpos 0
          hexactsize 0
@@ -323,14 +251,43 @@ FrameWidgetClass FrameWidget {
         }
         ButtonWidgetClass ActionsGroupFOG {
          color 0.5765 0.5765 0.5765 1
-         position 0.85709 0.12087
-         size 0.10541 0.0255
+         position 0.8871 0.1209
+         size 0.09 0.0255
          hexactpos 0
          vexactpos 0
          hexactsize 0
          vexactsize 0
          style Default
          text "FOG"
+        }
+        ButtonWidgetClass ActionsGroupALL {
+         color 0.5765 0.5765 0.5765 1
+         position 0.01096 0.1209
+         size 0.12491 0.0255
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style Default
+         text "ALL"
+        }
+        TextWidgetClass FIlterLabel {
+         position 0.01019 0.08097
+         size 0.15252 0.03437
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         text "Filter"
+        }
+        EditBoxWidgetClass FilterField {
+         position 0.16794 0.08112
+         size 0.80674 0.03082
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style Editor
         }
        }
       }
@@ -445,8 +402,8 @@ FrameWidgetClass FrameWidget {
      visible 0
      clipchildren 0
      color 0.1098 0.1098 1 1
-     position 0.02 0.09288
-     size 0.96 0.89642
+     position -0.09729 0.09288
+     size 1.07729 0.89642
      halign left
      valign top
      hexactpos 0
@@ -456,8 +413,8 @@ FrameWidgetClass FrameWidget {
      priority 50
      {
       PanelWidgetClass Weapons {
-       position 0.01062 0.00161
-       size 0.9767 0.81594
+       position -0.0173 0.00161
+       size 1.00462 0.81594
        hexactpos 0
        vexactpos 0
        hexactsize 0
@@ -631,8 +588,8 @@ FrameWidgetClass FrameWidget {
      visible 0
      clipchildren 0
      color 0.1098 0.1098 1 1
-     position 0.02 0.0929
-     size 0.96 0.92283
+     position -0.08225 0.0929
+     size 1.06225 0.92283
      halign left
      valign top
      hexactpos 0
@@ -721,11 +678,11 @@ FrameWidgetClass FrameWidget {
      }
     }
     FrameWidgetClass Card3 {
-     visible 1
+     visible 0
      clipchildren 0
      color 0.1098 0.1098 1 1
-     position 0.02 0.0929
-     size 0.96 0.92283
+     position -0.09127 0.0929
+     size 1.07127 0.92283
      halign left
      valign top
      hexactpos 0
@@ -852,6 +809,146 @@ FrameWidgetClass FrameWidget {
          items "Fast;Slow"
         }
        }
+      }
+     }
+    }
+    FrameWidgetClass Card4 {
+     visible 0
+     clipchildren 0
+     color 0.1098 0.1098 1 1
+     position -0.09019 0.0929
+     size 1.07019 0.92283
+     halign left
+     valign top
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     priority 50
+     {
+      PanelWidgetClass Panel {
+       ignorepointer 1
+       color 0 0.0627 0.2549 1
+       position 0.019 0.01586
+       size 0.97267 0.94982
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       {
+        ImageWidgetClass BackGround {
+         visible 1
+         ignorepointer 1
+         color 0 0 0 1
+         position 10 10
+         size 440.16202 900.85596
+         hexactpos 1
+         vexactpos 1
+         hexactsize 1
+         vexactsize 1
+        }
+        TextListboxWidgetClass EventHistory {
+         position 0.02346 0.0137
+         size 0.977 0.93968
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         font "gui/fonts/etelkatextpro14"
+        }
+        ButtonWidgetClass ClearButton {
+         position 0.02896 0.96853
+         size 0.271 0.024
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         text "Clear"
+        }
+       }
+      }
+     }
+    }
+    ImageWidgetClass Background {
+     visible 1
+     color 0 0 0 0.6353
+     position -0.11334 -0.0007
+     size 1.11334 1
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     imageTexture "{68AE58E5E99FB598}Gui/textures/left_pane_full_ca.edds"
+     mode blend
+     "src alpha" 0
+     stretch 1
+     filter 1
+     "Transition width" 0.101
+     {
+      EditBoxWidgetClass PlayerStatusV {
+       position 0.011 0.021
+       size 0.97693 0.01432
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "Test"
+       font "gui/fonts/etelkatextpro"
+      }
+      TextWidgetClass PlayerStatusT {
+       position 0.008 0.002
+       size 0.97486 0.018
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "Player Status"
+       font "gui/fonts/etelkatextpro"
+      }
+      ButtonWidgetClass Card0Button {
+       position 0.043 0.042
+       size 0.271 0.024
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "Actions"
+      }
+      ButtonWidgetClass Card1Button {
+       position 0.321 0.042
+       size 0.367 0.024
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "Weapons"
+      }
+      ButtonWidgetClass Card2Button {
+       position 0.69531 0.04191
+       size 0.26089 0.024
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "Ctrl"
+      }
+      ButtonWidgetClass Card3Button {
+       position 0.04232 0.06754
+       size 0.34606 0.024
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "Other Cmds"
+      }
+      ButtonWidgetClass Card4Button {
+       position 0.39449 0.06754
+       size 0.34606 0.024
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "Event History"
       }
      }
     }

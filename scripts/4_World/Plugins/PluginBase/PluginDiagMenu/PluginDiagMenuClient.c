@@ -9,15 +9,16 @@ class PluginDiagMenuClient : PluginDiagMenu
 	static int m_SystemsMask;
 	
 	// Cheats
-	bool m_ModifiersDisabled;
+	bool m_ModifiersEnabled = true;
 	int m_IsInvincible;	
-	bool m_StaminaDisabled;
+	bool m_StaminaDisabled;	
 	
 	// Misc
 	float m_Playtime;
 	bool m_LogPlayerStats;	
 	Shape m_VehicleFreeAreaBox;	
 	ref EnvDebugData m_EnvDebugData;
+	ref FallDamageDebugData m_FallDamageDebugData;
 	
 	override void OnInit()
 	{
@@ -52,6 +53,8 @@ class PluginDiagMenuClient : PluginDiagMenu
 		DiagMenu.BindCallback(DiagMenuIDs.CHEATS_RESET_PLAYER_MAX, CBCheatsResetPlayerMax);
 		DiagMenu.BindCallback(DiagMenuIDs.CHEATS_INVENTORY_ACCESS, CBCheatsInventoryAccess);
 		DiagMenu.BindCallback(DiagMenuIDs.CHEATS_FIX_ITEMS, CBCheatsFixItems);
+		DiagMenu.BindCallback(DiagMenuIDs.CHEATS_CREATE_HIT, CBCreateHit);
+		DiagMenu.BindCallback(DiagMenuIDs.CHEATS_CREATE_HIT_LIGHT, CBCreateHitLight);
 		
 		//---------------------------------------------------------------
 		// LEVEL 2 - Script > Player Agents
@@ -78,13 +81,20 @@ class PluginDiagMenuClient : PluginDiagMenu
 		DiagMenu.BindCallback(DiagMenuIDs.MISC_DISABLE_PERSONAL_LIGHT, CBMiscPersonalLight);
 		DiagMenu.BindCallback(DiagMenuIDs.MISC_ITEM_DEBUG_ACTIONS, CBMiscItemDebugActions); // Is enabled by default now
 		DiagMenu.BindCallback(DiagMenuIDs.MISC_LOG_PLAYER_STATS, CBMiscLogPlayerStats);
+		DiagMenu.BindCallback(DiagMenuIDs.MISC_FORCE_HINT_INDEX, CBMiscForceHintIndex);
+		
+		//---------------------------------------------------------------
+		// LEVEL 2 - Script > Misc -> Environment
+		//---------------------------------------------------------------
+		DiagMenu.BindCallback(DiagMenuIDs.MISC_ENVIRONMENT_DEBUG, CBMiscEnvironmentDebug);	
+		DiagMenu.BindCallback(DiagMenuIDs.MISC_ENVIRONMENT_LOGGING_DRYWET, CBMiscEnvironmentLoggingDryWet);	
 		
 		//---------------------------------------------------------------
 		// LEVEL 2 - Script > Misc
 		//---------------------------------------------------------------
 		DiagMenu.BindCallback(DiagMenuIDs.MISC_PERMANENT_CROSSHAIR, CBMiscPermanentCrossHair);		
 		DiagMenu.BindCallback(DiagMenuIDs.MISC_TOGGLE_HUD, CBMiscToggleHud);
-		DiagMenu.BindCallback(DiagMenuIDs.MISC_ENVIRONMENT_DEBUG, CBMiscEnvironmentDebug);
+		DiagMenu.BindCallback(DiagMenuIDs.MISC_FALLDAMAGE_DEBUG, CBMiscFallDamageDebug);
 		DiagMenu.BindCallback(DiagMenuIDs.MISC_DISPLAY_PLAYER_INFO, CBMiscDisplayPlayerInfo);
 		DiagMenu.BindCallback(DiagMenuIDs.MISC_UNIVERSAL_TEMPERATURE_SOURCES, CBMiscUniversalTemperatureSources);			
 		DiagMenu.BindCallback(DiagMenuIDs.MISC_BULLET_IMPACT, CBMiscBulletImpact);			
@@ -125,6 +135,7 @@ class PluginDiagMenuClient : PluginDiagMenu
 		// LEVEL 2 - Script > Misc
 		//---------------------------------------------------------------	
 		DiagMenu.BindCallback(DiagMenuIDs.MISC_FREEZE_ENTITY, CBMiscFreezeEntity);
+		DiagMenu.BindCallback(DiagMenuIDs.MISC_DEBUG_MONITOR, CBDebugMonitor);
 
 		//---------------------------------------------------------------
 		// LEVEL 2 - Script > Simulate script
@@ -188,6 +199,7 @@ class PluginDiagMenuClient : PluginDiagMenu
 		DiagMenu.BindCallback(DiagMenuIDs.LOGS_ACTIONS, CBLogsActions);
 		DiagMenu.BindCallback(DiagMenuIDs.LOGS_WEAPONS, CBLogsWeapons);
 		DiagMenu.BindCallback(DiagMenuIDs.LOGS_SYMPTOMS, CBLogsSymptoms);
+		DiagMenu.BindCallback(DiagMenuIDs.LOGS_BLEEDING_CHANCES, CBLogsBleedingChances);
 
 		//---------------------------------------------------------------
 		// LEVEL 3 - Script > Logs > InventoryLogs
@@ -231,6 +243,15 @@ class PluginDiagMenuClient : PluginDiagMenu
 					m_EnvDebugData = new EnvDebugData();
 				
 				ctx.Read(m_EnvDebugData);
+				break;
+			}
+			
+			case ERPCs.DIAG_MISC_FALLDAMAGE_DEBUG_DATA:
+			{
+				if (!m_FallDamageDebugData)
+					m_FallDamageDebugData = new FallDamageDebugData();
+				
+				ctx.Read(m_FallDamageDebugData);
 				break;
 			}
 			
@@ -312,7 +333,7 @@ class PluginDiagMenuClient : PluginDiagMenu
 	static void CBCheatsModifiers(bool enabled)
 	{
 		PluginDiagMenuClient pluginDiag = PluginDiagMenuClient.Cast(GetPlugin(PluginDiagMenuClient));
-		DiagToggleRPCServer(enabled, pluginDiag.m_ModifiersDisabled, ERPCs.DIAG_CHEATS_MODIFIERS);
+		DiagToggleRPCServer(enabled, pluginDiag.m_ModifiersEnabled, ERPCs.DIAG_CHEATS_MODIFIERS);
 	}
 	
 	//---------------------------------------------
@@ -331,6 +352,10 @@ class PluginDiagMenuClient : PluginDiagMenu
 	//---------------------------------------------
 	static void CBCheatsStaminaDisable(bool enabled)
 	{
+		PlayerBase player = PlayerBase.Cast(GetGame().GetPlayer());
+		if (player)
+			player.SetStaminaDisabled(enabled);
+
 		PluginDiagMenuClient pluginDiag = PluginDiagMenuClient.Cast(GetPlugin(PluginDiagMenuClient));
 		DiagToggleRPCServer(enabled, pluginDiag.m_StaminaDisabled, ERPCs.DIAG_CHEATS_DISABLE_STAMINA);
 	}
@@ -363,6 +388,16 @@ class PluginDiagMenuClient : PluginDiagMenu
 	static void CBCheatsFixItems(bool enabled, int id)
 	{
 		DiagButtonRPC(enabled, id, ERPCs.DIAG_CHEATS_ITEMS_FIX, true);
+	}
+	
+	static void CBCreateHit(bool enabled, int id)
+	{
+		DiagButtonRPC(enabled, id, ERPCs.DIAG_CHEATS_CREATE_HIT, true);
+	}
+	
+	static void CBCreateHitLight(bool enabled, int id)
+	{
+		DiagButtonRPC(enabled, id, ERPCs.DIAG_CHEATS_CREATE_HIT_LIGHT, true);
 	}
 	
 	//---------------------------------------------
@@ -434,6 +469,12 @@ class PluginDiagMenuClient : PluginDiagMenu
 		DiagToggleRPC(enabled, pluginDiag.m_LogPlayerStats, ERPCs.DIAG_MISC_LOG_PLAYER_STATS);
  	}
 	
+	//---------------------------------------------
+	static void CBMiscForceHintIndex(int index)
+	{
+		UiHintPanel.m_ForcedIndex = index;
+ 	}
+	
 	//---------------------------------------------	
 	static void CBMiscPermanentCrossHair(bool enabled)
 	{
@@ -483,22 +524,33 @@ class PluginDiagMenuClient : PluginDiagMenu
 	//---------------------------------------------	
 	static void CBMiscEnvironmentDebug(bool enabled)
 	{
-		if (GetGame().IsMultiplayer())
-		{
-			SendDiagRPC(enabled, ERPCs.DIAG_MISC_ENVIRONMENT_DEBUG);
-		}
+		SendDiagRPC(enabled, ERPCs.DIAG_MISC_ENVIRONMENT_DEBUG);
 	}
 	
 	void UpdateEnvironmentDebug()
 	{
-		if ( DiagMenu.GetBool(DiagMenuIDs.MISC_ENVIRONMENT_DEBUG) && m_EnvDebugData )
-		{
+		if (DiagMenu.GetBool(DiagMenuIDs.MISC_ENVIRONMENT_DEBUG) && m_EnvDebugData)
 			Environment.DisplayEnvDebugPlayerInfo(true, m_EnvDebugData);
-		}
 		else if (m_EnvDebugData)
-		{
 			m_EnvDebugData = null;
-		}
+	}
+
+	static void CBMiscEnvironmentLoggingDryWet(bool enabled)
+	{
+		SendDiagRPC(enabled, ERPCs.DIAG_MISC_ENVIRONMENT_LOGGING_DRYWET);
+	}
+	
+	static void CBMiscFallDamageDebug(bool enabled)
+	{
+		SendDiagRPC(enabled, ERPCs.DIAG_MISC_FALLDAMAGE_DEBUG);
+	}
+	
+	void UpdateFallDamageDebug()
+	{
+		if (DiagMenu.GetBool(DiagMenuIDs.MISC_FALLDAMAGE_DEBUG) && m_FallDamageDebugData)
+			DayZPlayerImplementFallDamage.DisplayFallDamageDebugInfo(true, m_FallDamageDebugData);
+		else if (m_FallDamageDebugData)
+			m_FallDamageDebugData = null;
 	}
 	
 	//---------------------------------------------	
@@ -646,6 +698,17 @@ class PluginDiagMenuClient : PluginDiagMenu
 	}
 	
 	//---------------------------------------------
+	static void CBDebugMonitor(bool enabled, int id)
+	{
+		SendDiagRPC(enabled, ERPCs.DIAG_MISC_DEBUG_MONITOR, true);
+		
+		if (enabled)
+			GetGame().GetMission().CreateDebugMonitor();
+		else
+			GetGame().GetMission().HideDebugMonitor();
+	}
+	
+	//---------------------------------------------
 	static void CBMiscFreezeEntity(bool enabled, int id)
 	{
 		DiagButtonAction(enabled, id, ScriptCaller.Create(FreezeEntity));
@@ -707,6 +770,7 @@ class PluginDiagMenuClient : PluginDiagMenu
 			SendDiagRPC(true, ERPCs.DIAG_VEHICLES_DUMP_CRASH_DATA_REQUEST, true);
 			DiagMenu.SetValue(DiagMenuIDs.VEHICLE_DUMP_CRASH_DATA, 0);
 		}
+		//DiagButtonRPC(value, DiagMenuIDs.VEHICLE_DUMP_CRASH_DATA, ERPCs.DIAG_VEHICLES_DUMP_CRASH_DATA_REQUEST, true);	
 		
 	}
 	
@@ -960,6 +1024,12 @@ class PluginDiagMenuClient : PluginDiagMenu
 	}
 	
 	//---------------------------------------------
+	static void CBLogsBleedingChances(bool enabled)
+	{
+		DiagToggleRPC(enabled, LogManager.IsBleedingChancesLogEnable(), ERPCs.DIAG_LOGS_BLEEDING_CHANCES);
+	}
+	
+	//---------------------------------------------
 	static void CBTriggerDebug(bool enabled)
 	{
 		EnableDebugSystemClient(ESubscriberSystems.TRIGGERS, enabled);
@@ -1008,8 +1078,25 @@ class PluginDiagMenuClient : PluginDiagMenu
 	{
 		if (!GetGame())
 			return null;
+
+		PlayerBase player = PlayerBase.Cast(GetGame().GetPlayer());
+
+		if (DiagMenu.GetBool(DiagMenuIDs.MISC_ACTION_ON_CURSOR))
+		{
+			float hitFraction;
+			vector start = GetGame().GetCurrentCameraPosition();
+			vector end = start + (GetGame().GetCurrentCameraDirection() * 5.0);	
+
+			vector hitPos, hitNormal;
+			Object hitObj;
+			
+			PhxInteractionLayers hitMask = 0xFFFFFFFFFF;
+
+			DayZPhysics.RayCastBullet(start, end, hitMask, null, hitObj, hitPos, hitNormal, hitFraction);
+			Class.CastTo(player, hitObj);
+		}
 		
-		return PlayerBase.Cast(GetGame().GetPlayer());
+		return player;
 	}
 	
 	//---------------------------------------------
@@ -1214,7 +1301,7 @@ class PluginDiagMenuClient : PluginDiagMenu
 			
 			if (!GetGame().IsMultiplayer() || !serverOnly)
 			{
-				SendDiagRPCSelf(value, rpc);
+				GetGame().RPCSelfSingleParam(player, rpc, value);
 			}
 		}
  	}

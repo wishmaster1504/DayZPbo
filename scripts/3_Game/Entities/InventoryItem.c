@@ -23,7 +23,7 @@ class InventoryItem extends EntityAI
 
 	proto native MeleeCombatData GetMeleeCombatData();	
 	
-	proto native void ThrowPhysically(DayZPlayer player, vector force);
+	proto native void ThrowPhysically(DayZPlayer player, vector force, bool collideWithCharacters = true);
 
 	//! Sets the item to use the server configured 'networkRangeFar' instead of 'networkRangeNear'
 	//  This method performs an OR operation with the config 'forceFarBubble'. If set in the config 
@@ -95,14 +95,14 @@ class InventoryItem extends EntityAI
 			return;
 
 		SoundObjectBuilder soundBuilder = m_SoundImpactTable.GetSoundBuilder(surfaceHash);
-		if (soundBuilder != NULL)
+		if (soundBuilder != null)
 		{
-			soundBuilder.SetVariable("weight", weight);
-			soundBuilder.SetVariable("speed", velocity);
-			soundBuilder.UpdateEnvSoundControllers(GetPosition());
+			soundBuilder.AddVariable("weight", weight);
+			soundBuilder.AddVariable("speed", velocity);
+			soundBuilder.AddEnvSoundVariables(GetPosition());
 				
 			SoundObject soundObject = soundBuilder.BuildSoundObject();
-			if (soundObject != NULL)
+			if (soundObject != null)
 			{
 				soundObject.SetKind(WaveKind.WAVEEFFECTEX);
 				PlaySound(soundObject, soundBuilder);
@@ -113,29 +113,40 @@ class InventoryItem extends EntityAI
 	// -------------------------------------------------------------------------------
 	protected void InitImpactSoundData()
 	{
-		if ( GetGame().IsDedicatedServer() )
-			return;
-
+		#ifndef SERVER
 		string soundImpactType = "default";
 		if ( ConfigIsExisting("soundImpactType") )
 			soundImpactType = ConfigGetString("soundImpactType");
 		
 		m_SoundImpactTable = AnimSoundLookupTableBank.GetInstance().GetImpactTable(soundImpactType + "_Impact_LookupTable");
+		#endif
 	}
 	
 	// -------------------------------------------------------------------------------
 	AbstractWave PlaySound(SoundObject so, SoundObjectBuilder sob)
 	{
-		if (so == NULL)
-		{
-			//Print("PlaySound: NULL argument");
-			return NULL;
-		}
+		if (so == null)
+			return null;
 
 		so.SetPosition(GetPosition());
 		AbstractWave wave = GetGame().GetSoundScene().Play3D(so, sob);
+
 		return wave;
 	}
+	
+	// -------------------------------------------------------------------------------
+	void PlaySoundByAnimEvent(EAnimSoundEventID id)
+	{
+		AnimSoundEvent soundEvent = GetInventoryItemType().GetSoundEvent(id);
+		if (soundEvent)
+		{
+			SoundObjectBuilder builder = soundEvent.GetSoundBuilder();
+			SoundObject soundObject = builder.BuildSoundObject();
+			if (soundObject)
+				PlaySound(soundObject, builder);
+		}
+	}
+	
 	
 	// -------------------------------------------------------------------------------
 	string GetImpactSurfaceType(IEntity other, Contact impact)
@@ -154,16 +165,18 @@ class InventoryItem extends EntityAI
 
 		vector add = impact.RelativeVelocityBefore.Normalized() * size.Length();
 		string surfaceImpact;
-		if (DayZPhysics.GetHitSurface(
+		if (DayZPhysics.GetHitSurfaceAndLiquid(
 			Object.Cast(other),
 			impact.Position + add,
 			impact.Position - add,
-			surfaceImpact))
+			surfaceImpact,
+			liquid))
 		{
 			return surfaceImpact;
 		}
 		string surface;
 		GetGame().SurfaceUnderObjectEx(this, surface, surfaceImpact, liquid);
+
 		return surfaceImpact;
 	}
 	

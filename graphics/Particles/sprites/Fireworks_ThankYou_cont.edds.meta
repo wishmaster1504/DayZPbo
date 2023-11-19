@@ -1,0 +1,18 @@
+MetaFileClass {
+ Name "{A1FBE8036C696DCA}Graphics/Particles/sprites/Fireworks_ThankYou_cont.edds"
+ Author "3643"
+ ChangeDate 1698492204
+ Configurations {
+  TGAResourceClass PC {
+   SourceFile "Fireworks_ThankYou_cont.tga"
+   FormatCompress Medium
+   Conversion DXTCompression
+  }
+  TGAResourceClass XBOX_ONE : PC {
+  }
+  TGAResourceClass PS4 : PC {
+  }
+  TGAResourceClass LINUX : PC {
+  }
+ }
+}

@@ -429,6 +429,7 @@ FrameWidgetClass HudFrameWidget {
       ImageWidgetClass HighPingA {
        visible 0
        ignorepointer 1
+       ignoregloballv 1
        color 0.7961 0.5961 0.1922 1
        position 0 13
        size 32 32
@@ -447,6 +448,7 @@ FrameWidgetClass HudFrameWidget {
       ImageWidgetClass HighPingB {
        visible 0
        ignorepointer 1
+       ignoregloballv 1
        color 1 0 0 1
        position 0 13
        size 32 32
@@ -464,6 +466,7 @@ FrameWidgetClass HudFrameWidget {
       ImageWidgetClass LowServerPerfA {
        visible 0
        ignorepointer 1
+       ignoregloballv 1
        color 0.7961 0.5961 0.1922 1
        position 0 91
        size 32 32
@@ -480,6 +483,7 @@ FrameWidgetClass HudFrameWidget {
       ImageWidgetClass LowServerPerfB {
        visible 0
        ignorepointer 1
+       ignoregloballv 1
        color 1 0 0 1
        position 0 91
        size 32 32
@@ -496,6 +500,7 @@ FrameWidgetClass HudFrameWidget {
       ImageWidgetClass ConnectionLost {
        visible 0
        ignorepointer 1
+       ignoregloballv 1
        color 1 0 0 1
        position 0 52
        size 32 32
@@ -517,8 +522,8 @@ FrameWidgetClass HudFrameWidget {
      visible 1
      clipchildren 0
      ignorepointer 1
-     position 252 0
-     size 308.41501 79
+     position 252 -0.00001
+     size 364.349 79
      halign right_ref
      valign bottom_ref
      hexactpos 1
@@ -706,6 +711,27 @@ FrameWidgetClass HudFrameWidget {
        vexactsize 1
        fixaspect fixwidth
        image0 "set:dayz_gui image:iconShock"
+       mode blend
+       "src alpha" 1
+       "no wrap" 1
+       stretch 0
+       filter 1
+       nocache 0
+      }
+      ImageWidgetClass InjuredLegs {
+       visible 1
+       clipchildren 1
+       color 0.8627 0.8627 0.8627 1
+       position 0.8 0
+       size 35 35
+       halign right_ref
+       valign bottom_ref
+       hexactpos 0
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       fixaspect fixwidth
+       image0 "set:dayz_gui image:iconInjuredLegs0"
        mode blend
        "src alpha" 1
        "no wrap" 1

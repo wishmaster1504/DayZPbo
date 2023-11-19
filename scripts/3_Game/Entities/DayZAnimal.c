@@ -46,6 +46,12 @@ class DayZCreature extends EntityAI
 	proto native bool IsDeathProcessed();
 	proto native bool IsDeathConditionMet();
 	
+	//---------------------------------------------------------
+	// bone transforms 
+
+	//! returns bone index for a name (-1 if pBoneName doesn't exist)
+	proto native 	int 		GetBoneIndexByName(string pBoneName);
+	
 	override bool IsDayZCreature()
 	{
 		return true;
@@ -59,6 +65,77 @@ class DayZCreature extends EntityAI
 	override bool IsIgnoredByConstruction()
 	{
 		return IsRuined();
+	}
+	
+	override bool IsManagingArrows()
+	{
+		return true;
+	}	
+	
+	override void AddArrow(Object arrow, int componentIndex, vector closeBonePosWS, vector closeBoneRotWS)
+	{
+		CachedObjectsArrays.ARRAY_STRING.Clear();
+		GetActionComponentNameList(componentIndex, CachedObjectsArrays.ARRAY_STRING, "fire");
+		
+		int pivot = -1;
+		
+		
+		for (int i = 0; i < CachedObjectsArrays.ARRAY_STRING.Count() && pivot == -1; i++)
+		{
+			pivot = GetBoneIndexByName(CachedObjectsArrays.ARRAY_STRING.Get(i));
+		}
+		
+		vector parentTransMat[4];
+		vector arrowTransMat[4];
+		
+		if (pivot == -1)
+		{
+			GetTransform(parentTransMat);
+		}
+		else
+		{
+			vector rotMatrix[3];
+			Math3D.YawPitchRollMatrix(closeBoneRotWS * Math.RAD2DEG,rotMatrix);
+			
+			parentTransMat[0] = rotMatrix[0];
+			parentTransMat[1] = rotMatrix[1];
+			parentTransMat[2] = rotMatrix[2];
+			parentTransMat[3] = closeBonePosWS;
+		}
+		
+		arrow.GetTransform(arrowTransMat);
+		Math3D.MatrixInvMultiply4(parentTransMat, arrowTransMat, arrowTransMat);
+		// orthogonalize matrix - parent might be skewed
+		Math3D.MatrixOrthogonalize4(arrowTransMat);
+		arrow.SetTransform(arrowTransMat);
+		
+		AddChild(arrow, pivot);
+	}
+	
+	override bool HasFixedActionTargetCursorPosition()
+	{
+		return true;
+	}
+
+	//-------------------------------------------------------------
+	//!
+	//! ModOverrides
+	//! 
+	// these functions are for modded overide in script command mods 
+
+	bool	ModCommandHandlerBefore(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+	{
+		return false;
+	}
+
+	bool	ModCommandHandlerInside(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+	{
+		return false;
+	}
+	
+	bool	ModCommandHandlerAfter(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+	{
+		return false;
 	}
 }
 
@@ -82,6 +159,8 @@ class DayZCreatureAI extends DayZCreature
 	proto native void DestroyAIAgent();
 	
 	int m_EffectTriggerCount;//how many effect triggers is this AI inside of(overlapping triggers)
+	
+	protected DayZPlayer m_CinematicPlayer;
 	
 
 	void DayZCreatureAI()
@@ -198,7 +277,7 @@ class DayZCreatureAI extends DayZCreature
 			SoundObjectBuilder objectBuilder = sound_event.GetSoundBuilder();
 			if(NULL != objectBuilder)
 			{
-				objectBuilder.UpdateEnvSoundControllers(GetPosition());
+				objectBuilder.AddEnvSoundVariables(GetPosition());
 				SoundObject soundObject = objectBuilder.BuildSoundObject();
 				PlaySound(soundObject, objectBuilder);
 			}
@@ -218,7 +297,7 @@ class DayZCreatureAI extends DayZCreature
 			SoundObjectBuilder objectBuilder = sound_event.GetSoundBuilder();
 			if(NULL != objectBuilder)
 			{
-				objectBuilder.UpdateEnvSoundControllers(GetPosition());
+				objectBuilder.AddEnvSoundVariables(GetPosition());
 				SoundObject soundObject = objectBuilder.BuildSoundObject();
 				AttenuateSoundIfNecessary(soundObject);
 				PlaySound(soundObject, objectBuilder);
@@ -238,7 +317,7 @@ class DayZCreatureAI extends DayZCreature
 		if(soundBuilder == NULL)
 			return;
 		
-		soundBuilder.UpdateEnvSoundControllers(GetPosition());
+		soundBuilder.AddEnvSoundVariables(GetPosition());
 		SoundObject soundObject = soundBuilder.BuildSoundObject();
 		AttenuateSoundIfNecessary(soundObject);
 		PlaySound(soundObject, soundBuilder);
@@ -286,6 +365,148 @@ class DayZCreatureAI extends DayZCreature
 	string ReleaseSound()
 	{
 		return "";
+	}
+	
+	// ================
+	// CINEMATIC CONTROLLER
+	// ================
+	
+	void CinematicTakeControl(DayZPlayer player)
+	{
+		m_CinematicPlayer = player;
+	}
+
+	bool CinematicCanJump()
+	{
+		return true;
+	}
+	
+	override bool ModCommandHandlerBefore(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+	{
+		if (!m_CinematicPlayer)
+		{
+			return super.ModCommandHandlerBefore(pDt, pCurrentCommandID, pCurrentCommandFinished);
+		}
+		
+		UAInterface input = m_CinematicPlayer.GetInputInterface();
+			
+		DayZCreatureAIInputController controller;
+		GetGame().GameScript.CallFunction(this, "GetInputController", controller, 0);
+			
+		if (!input || !controller)
+		{
+			return super.ModCommandHandlerBefore(pDt, pCurrentCommandID, pCurrentCommandFinished);
+		}
+		
+		float movementX = input.SyncedValue_ID(UAAimRight) - input.SyncedValue_ID(UAAimLeft);
+		
+		float maxTurnSpeed = 100.0;
+		movementX = Math.Clamp(movementX * maxTurnSpeed * pDt, -180, 180);
+		
+		if (input.SyncedValue_ID(UALookAround) > 0)
+		{
+			movementX = 0;
+		}
+		
+		bool isJump = input.SyncedValue_ID(UAGetOver) > 0;
+		bool isMove = input.SyncedValue_ID(UAMoveForward) > 0;
+		
+		bool isRest = input.SyncedValue_ID(UAMoveBack) > 0;
+		bool isSleep = input.SyncedValue_ID(UAReloadMagazine) > 0;
+
+		float heading = GetOrientation()[0] + movementX;
+		
+		int iAlert = 0;
+		float fAlert = 0;
+		int iSpeed = 0;
+		float fSpeed = 0;
+		
+		if (isMove)
+		{
+			iAlert = 1;
+			fAlert = 0.2;
+			
+			bool isSprint = input.SyncedValue_ID(UATurbo) > 0;
+			bool isJog = input.SyncedValue_ID(UAWalkRunTemp) > 0;
+			bool isWalk = !isSprint && !isJog;
+			if (isSprint)
+			{
+				//! sprint
+				iSpeed = 3;
+			}
+			else if (isJog)
+			{
+				//! jog
+				iSpeed = 2;
+			}
+			else if (isWalk)
+			{
+				//! walk
+				iSpeed = 1;
+			}
+		}
+		
+		DayZAnimalInputController animalController;
+		if (Class.CastTo(animalController, controller))
+		{
+			animalController.OverrideBehaviourSlot(true, DayZAnimalBehaviourSlot.NON_SPECIFIC_THREAT);
+			animalController.OverrideBehaviourAction(true, DayZAnimalBehaviourAction.TRAVELING_INPUT);
+			
+			if (!isMove)
+			{
+				if (isRest)
+				{
+					iSpeed = 0;
+					animalController.OverrideBehaviourAction(true, DayZAnimalBehaviourAction.IDLE1_INPUT);
+				}
+				
+				if (isSleep)
+				{
+					iSpeed = 0;
+					animalController.OverrideBehaviourAction(true, DayZAnimalBehaviourAction.WALKING_INPUT);
+				}
+			}
+		}
+			
+		bool lowVel = GetVelocity(this).Length() < 0.5;
+		if (iSpeed > 0 && lowVel)
+		{
+			iAlert = 4;
+			fAlert = 1.0;
+			
+			iSpeed = 3;
+		}
+		
+		if (animalController)
+		{
+			switch (iSpeed)
+			{
+			case 0:
+				fSpeed = 0;
+				break;
+			case 1:
+				fSpeed = 2;
+				break;
+			case 2:
+				fSpeed = 3;
+				break;
+			case 3:
+				fSpeed = 5;
+				break;
+			}
+		}
+		
+		controller.OverrideTurnSpeed(true, Math.PI2 / pDt);
+		controller.OverrideMovementSpeed(true, fSpeed);
+		controller.OverrideHeading(true, heading * Math.DEG2RAD);
+		controller.OverrideAlertLevel(true, true, iAlert, fAlert);
+		
+		if (CinematicCanJump() && isJump)
+		{
+			controller.OverrideJump(true, 101, 2.0);
+		}
+
+		return true;
 	}
 }
 
@@ -510,27 +731,6 @@ class DayZAnimal extends DayZCreatureAI
 		{
 			return;
 		}
-	}
-	
-	//-------------------------------------------------------------
-	//!
-	//! ModOverrides
-	//! 
-	// these functions are for modded overide in script command mods 
-
-	bool ModCommandHandlerBefore(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
-	{
-		return false;
-	}
-
-	bool ModCommandHandlerInside(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
-	{
-		return false;
-	}
-	
-	bool ModCommandHandlerAfter(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
-	{
-		return false;
 	}
 	
 	bool m_DamageHitToProcess = false;

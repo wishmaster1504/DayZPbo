@@ -6,6 +6,11 @@ class Hologram
 	protected const int SPAWN_FLAGS 	= ECE_LOCAL;
 	#endif
 	
+	
+	#ifdef DIAG_DEVELOPER
+	string m_CollisionDetails;
+	#endif
+	
 	protected const string SUFFIX_MATERIAL_DEPLOYABLE 	= "_deployable.rvmat";
 	protected const string SUFFIX_MATERIAL_UNDEPLOYABLE = "_undeployable.rvmat";
 	protected const string SUFFIX_MATERIAL_POWERED 		= "_powered.rvmat";
@@ -59,25 +64,28 @@ class Hologram
 
 	void Hologram(PlayerBase player, vector pos, ItemBase item)
 	{	
-		m_Player = player;
-		m_Parent = item;
-		m_Projection = NULL;
-		m_ProjectionTrigger = NULL;
-		m_UpdatePosition = true;
-		m_Rotation = "0 0 0";
-		m_ContactComponent = -1;
-		m_FromAdjusted = "0 0 0";
+		m_Player 		= player;
+		m_Parent 		= item;
+		m_Projection 	= null;
+
+		m_ProjectionTrigger = null;
+		m_UpdatePosition 	= true;
+		m_ContactComponent 	= -1;
+
+		m_Rotation 		= "0 0 0";
+		m_FromAdjusted 	= "0 0 0";
 		
 		// If the static names are empty, generate the needed names
 		// Refer to their definitions to see why these are required
 		if (m_WatchtowerIgnoreComponentNames.Count() == 0)
 		{
-			string baseStringBegin = Watchtower.BASE_VIEW_NAME;
-			string baseIgnoreStringEnd = Watchtower.BASE_WALL_NAME;
-			int floors = Watchtower.MAX_WATCHTOWER_FLOORS;
-			int walls = Watchtower.MAX_WATCHTOWER_WALLS;
+			string baseStringBegin 		= Watchtower.BASE_VIEW_NAME;
+			string baseIgnoreStringEnd 	= Watchtower.BASE_WALL_NAME;
+
+			int floors 	= Watchtower.MAX_WATCHTOWER_FLOORS;
+			int walls 	= Watchtower.MAX_WATCHTOWER_WALLS;
+
 			string compName;
-			
 			for (int i = 1; i < floors + 1; ++i)
 			{
 				compName = baseStringBegin + i.ToString();
@@ -88,7 +96,6 @@ class Hologram
 					m_WatchtowerBlockedComponentNames.Insert(compName);
 				else
 					m_WatchtowerIgnoreComponentNames.Insert(compName);
-
 			}
 		}
 
@@ -243,43 +250,41 @@ class Hologram
 	}
 	
 	// update loop for visuals and collisions of the hologram
-	void UpdateHologram( float timeslice )
+	void UpdateHologram(float timeslice)
 	{
-		if ( !m_Parent )
+		if (!m_Parent)
 		{
 			m_Player.TogglePlacingLocal();
 			
 			return;
 		}
 		
-		if ( m_Player.IsSwimming() || m_Player.IsClimbingLadder() || m_Player.IsRaised() || m_Player.IsClimbing() || m_Player.IsRestrained() || m_Player.IsUnconscious() )
+		if (IsRestrictedFromAdvancedPlacing())
 		{
 			m_Player.TogglePlacingLocal();
 			
 			return;
 		}
 
-		if ( !GetUpdatePosition() )
-		{
+		if (!GetUpdatePosition())
 			return;
-		} 
 		
 		
 		#ifdef DIAG_DEVELOPER
-		DebugConfigValues();	
+		DebugConfigValues();
 		DestroyDebugCollisionBox();
 		#endif
 
 		// update hologram position	
-		SetProjectionPosition( GetProjectionEntityPosition( m_Player ) );
-		SetProjectionOrientation( AlignProjectionOnTerrain( timeslice ) );
+		SetProjectionPosition(GetProjectionEntityPosition(m_Player));
+		SetProjectionOrientation(AlignProjectionOnTerrain(timeslice));
 
 		EvaluateCollision();
 		RefreshTrigger();
-		CheckPowerSource();	
+		CheckPowerSource();
 		RefreshVisual();
 
-		m_Projection.OnHologramBeingPlaced( m_Player );
+		m_Projection.OnHologramBeingPlaced(m_Player);
 	}
 	
 	vector AlignProjectionOnTerrain( float timeslice )
@@ -422,32 +427,45 @@ class Hologram
 	#endif
 
 	void EvaluateCollision(ItemBase action_item = null)
-	{	
-		if ( IsFloating() || IsHidden() || IsCollidingBBox(action_item) || IsCollidingPlayer() || IsClippingRoof() || !IsBaseViable() || IsCollidingGPlot() || IsCollidingZeroPos() || IsCollidingAngle() || !IsPlacementPermitted() || !HeightPlacementCheck() || IsUnderwater() || IsInTerrain() )
+	{
+		#ifdef DIAG_DEVELOPER
+		m_CollisionDetails = "";
+		#endif
+
+		if (!m_Player.CanPlaceItem(m_Projection))
 		{
-			SetIsColliding( true );
+			#ifdef DIAG_DEVELOPER
+			m_CollisionDetails += "[Player]";
+			#endif
+			SetIsColliding(true);
+			
+		}
+		else if (IsFloating() || IsHidden() || IsCollidingBBox(action_item) || IsCollidingPlayer() || IsClippingRoof() || !IsBaseViable() || IsCollidingGPlot() || IsCollidingZeroPos() || IsCollidingAngle() || !IsPlacementPermitted() || !HeightPlacementCheck() || IsUnderwater() || IsInTerrain())
+		{
+			SetIsColliding(true);
 		}
 		else if ( m_Projection.IsInherited( TrapSpawnBase ))
 		{
 			#ifdef DIAG_DEVELOPER
 			DebugText("Inherits from TrapSpawnBase, checking IsPlaceableAtposition", true);
 			#endif
-			TrapSpawnBase trap_spawn_base;
-			Class.CastTo( trap_spawn_base,  m_Projection );
-			SetIsColliding( !trap_spawn_base.IsPlaceableAtPosition( m_Projection.GetPosition() ) );
+
+			TrapSpawnBase trapSpawnBase;
+			Class.CastTo(trapSpawnBase, m_Projection);
+			SetIsColliding(!trapSpawnBase.IsPlaceableAtPosition(m_Projection.GetPosition()));
 		}
-		else if ( m_Projection.IsInherited( TrapBase ))
+		else if (m_Projection.IsInherited(TrapBase))
 		{
 			#ifdef DIAG_DEVELOPER
 			DebugText("Inherits from TrapBase, checking IsPlaceableAtposition", true);
 			#endif
-			TrapBase trap_base;
-			Class.CastTo(trap_base,  m_Projection);
-			SetIsColliding( !trap_base.IsPlaceableAtPosition( m_Projection.GetPosition() ) );
+			TrapBase trapBase;
+			Class.CastTo(trapBase, m_Projection);
+			SetIsColliding(!trapBase.IsPlaceableAtPosition(m_Projection.GetPosition()));
 		}
 		else
 		{
-			SetIsColliding( false );
+			SetIsColliding(false);
 		}
 	}
 	
@@ -523,7 +541,7 @@ class Hologram
 
 		vector center;
 		vector relativeOffset; //we need to lift BBox, because it is calculated from the bottom of projection, and not from the middle
-		vector absoluteOffset = "0 0.01 0"; //we need to lift BBox even more, because it colliddes with house floors due to various reasons (probably geometry or float imperfections)
+		vector absoluteOffset = "0 0.05 0"; //we need to lift BBox even more, because it colliddes with house floors due to various reasons (probably geometry or float imperfections)
 		vector orientation = GetProjectionOrientation();
 		vector edgeLength;
 		vector minMax[2];
@@ -572,16 +590,16 @@ class Hologram
 		if (CfgGameplayHandler.GetDisableIsBaseViableCheck())
 			return true;
 		
-		vector from_left_close = m_Projection.CoordToParent( GetLeftCloseProjectionVector() );
+		vector from_left_close = m_Projection.CoordToParent(GetLeftCloseProjectionVector());
 		vector to_left_close_down = from_left_close + "0 -1 0";
 
-		vector from_right_close = m_Projection.CoordToParent( GetRightCloseProjectionVector() );
+		vector from_right_close = m_Projection.CoordToParent(GetRightCloseProjectionVector());
 		vector to_right_close_down = from_right_close + "0 -1 0";
 
-		vector from_left_far = m_Projection.CoordToParent( GetLeftFarProjectionVector() );
+		vector from_left_far = m_Projection.CoordToParent(GetLeftFarProjectionVector());
 		vector to_left_far_down = from_left_far + "0 -1 0";
 
-		vector from_right_far = m_Projection.CoordToParent( GetRightFarProjectionVector() );
+		vector from_right_far = m_Projection.CoordToParent(GetRightFarProjectionVector());
 		vector to_right_far_down = from_right_far + "0 -1 0";
 		
 		vector contact_pos_left_close;
@@ -606,23 +624,23 @@ class Hologram
 		Object obj_right_far;
 
 		//Not sure what the intention here was before, but it boiled down to a very bloated version of what you see here right now
-		DayZPhysics.RaycastRV( from_left_close, to_left_close_down, contact_pos_left_close, contact_dir_left_close, contact_component_left_close, results_left_close, null, m_Projection, false, false, ObjIntersectFire );
+		DayZPhysics.RaycastRV(from_left_close, to_left_close_down, contact_pos_left_close, contact_dir_left_close, contact_component_left_close, results_left_close, null, m_Projection, false, false, ObjIntersectFire);
 		if (results_left_close.Count() > 0)
 			obj_left_close = results_left_close[results_left_close.Count() - 1];
 
-		DayZPhysics.RaycastRV( from_right_close, to_right_close_down, contact_pos_right_close, contact_dir_right_close, contact_component_right_close, results_right_close, null, m_Projection, false, false, ObjIntersectFire );
+		DayZPhysics.RaycastRV(from_right_close, to_right_close_down, contact_pos_right_close, contact_dir_right_close, contact_component_right_close, results_right_close, null, m_Projection, false, false, ObjIntersectFire);
 		if (results_right_close.Count() > 0)	
 			obj_right_close = results_right_close[results_right_close.Count() - 1];
 
-		DayZPhysics.RaycastRV( from_left_far, to_left_far_down, contact_pos_left_far, contact_dir_left_far, contact_component_left_far, results_left_far, null, m_Projection, false, false, ObjIntersectFire );
+		DayZPhysics.RaycastRV(from_left_far, to_left_far_down, contact_pos_left_far, contact_dir_left_far, contact_component_left_far, results_left_far, null, m_Projection, false, false, ObjIntersectFire);
 		if (results_left_far.Count() > 0) 
 			obj_left_far = results_left_far[results_left_far.Count() - 1];
 
-		DayZPhysics.RaycastRV( from_right_far, to_right_far_down, contact_pos_right_far, contact_dir_right_far, contact_component_right_far, results_right_far, null, m_Projection, false, false, ObjIntersectFire );
+		DayZPhysics.RaycastRV(from_right_far, to_right_far_down, contact_pos_right_far, contact_dir_right_far, contact_component_right_far, results_right_far, null, m_Projection, false, false, ObjIntersectFire);
 		if (results_right_far.Count() > 0)
 			obj_right_far = results_right_far[results_right_far.Count() - 1];
 		
-		return IsBaseIntact( obj_left_close, obj_right_close, obj_left_far, obj_right_far ) && IsBaseStatic( obj_left_close ) && IsBaseFlat( contact_pos_left_close, contact_pos_right_close, contact_pos_left_far, contact_pos_right_far );
+		return IsBaseIntact(obj_left_close, obj_right_close, obj_left_far, obj_right_far ) && IsBaseStatic( obj_left_close ) && IsBaseFlat( contact_pos_left_close, contact_pos_right_close, contact_pos_left_far, contact_pos_right_far);
 	}
 
 	bool IsCollidingGPlot()
@@ -785,11 +803,11 @@ class Hologram
 	{
 		if (CfgGameplayHandler.GetDisableIsPlacementPermittedCheck())
 			return true;
-		ItemBase item = m_Player.GetItemInHands();
-		bool isTrue = ( item && item.Type() == GetProjectionEntity().Type() && !item.CanBePlaced(m_Player, GetProjectionPosition()) );
-		isTrue = !isTrue; // ??????
+
+		bool isTrue = m_Parent && m_Parent.CanBePlaced(m_Player, GetProjectionPosition());
+
 		#ifdef DIAG_DEVELOPER
-		DebugText("IsPlacementPermitted(must be true): ", true, isTrue, " (Note: CanBePlaced function on item and projection type must be same as item type)");
+		DebugText("IsPlacementPermitted(must be true): ", true, isTrue, " (Note: ItemBase::CanBePlaced() return value)");
 		#endif
 		return isTrue;
 	}
@@ -952,13 +970,13 @@ class Hologram
 	void CheckPowerSource()
 	{
 		//in range of its power source.
-		if ( m_Player && m_Parent && m_Parent.HasEnergyManager() && m_Parent.GetCompEM().IsPlugged() )
+		if (m_Player && m_Parent && m_Parent.HasEnergyManager() && m_Parent.GetCompEM().IsPlugged())
 		{
 			// Unplug the device when the player is too far from the power source.
 			m_Parent.GetCompEM().UpdatePlugState();
 			
 			// Delete local hologram when plug is rippled out and advanced placement is active
-			if( GetGame().IsMultiplayer() && GetGame().IsClient() )
+			if (GetGame().IsMultiplayer() && GetGame().IsClient())
 			{
 				if (!m_Parent.GetCompEM().IsPlugged())
 					m_Player.TogglePlacingLocal();
@@ -1060,7 +1078,7 @@ class Hologram
 		return game.SurfaceIsSea( position[0], position[2] );
 	}
 
-	protected vector GetProjectionEntityPosition( PlayerBase player )
+	protected vector GetProjectionEntityPosition(PlayerBase player)
 	{
 		float minProjectionDistance;
 		float maxProjectionDistance; 
@@ -1278,7 +1296,7 @@ class Hologram
 	void SetIsColliding( bool is_colliding )
 	{
 		#ifdef DIAG_DEVELOPER
-		DebugText("Is colliding: ", false, is_colliding);
+		DebugText("Is colliding: ", false, is_colliding, m_CollisionDetails);
 		#endif
 		m_IsColliding = is_colliding;
 	}
@@ -1473,12 +1491,10 @@ class Hologram
 	}
 
 	//overloaded function to accept array of strings
-	void SetSelectionToRefresh( array<string> selection )
+	void SetSelectionToRefresh(array<string> selection)
 	{
-		for ( int i = 0; i < selection.Count(); i++ )
-		{
-			m_SelectionsToRefresh.Insert( selection.Get(i) );
-		}
+		foreach (string s : selection)
+			m_SelectionsToRefresh.Insert(s);
 	}
 	
 	void RefreshVisual()
@@ -1531,6 +1547,26 @@ class Hologram
 		}
 
 		return SUFFIX_MATERIAL_DEPLOYABLE;
+	}
+	
+	private bool IsRestrictedFromAdvancedPlacing()
+	{
+		if (m_Player.IsJumpInProgress())
+			return true;
+		if (m_Player.IsSwimming())
+			return true;
+		if (m_Player.IsClimbingLadder())
+			return true;
+		if (m_Player.IsRaised())
+			return true;
+		if (m_Player.IsClimbing())
+			return true;
+		if (m_Player.IsRestrained())
+			return true;
+		if (m_Player.IsUnconscious())
+			return true;
+		
+		return false;
 	}
 };
 

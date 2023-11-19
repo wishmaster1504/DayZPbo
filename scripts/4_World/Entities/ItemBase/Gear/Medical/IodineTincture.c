@@ -13,9 +13,7 @@ class IodineTincture : Edible_Base
 		
 		AddAction(ActionDisinfectTarget);
 		AddAction(ActionDisinfectSelf);;
-		AddAction(ActionWashHandsItem);
-		//AddAction(ActionForceDrinkDisinfectant);
-		//AddAction(ActionDrinkDisinfectant);
+		AddAction(ActionWashHandsItemContinuous);
 	}
 	
 	override float GetDisinfectQuantity(int system = 0, Param param1 = null)

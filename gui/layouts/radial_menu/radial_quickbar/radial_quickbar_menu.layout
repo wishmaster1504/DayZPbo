@@ -211,7 +211,7 @@ PanelWidgetClass GesturesMenu {
          hexactsize 1
          vexactsize 1
          text "#layout_xbox_ingame_menu_select"
-         font "gui/fonts/sdf_MetronLight24"
+         font "gui/fonts/sdf_MetronLight42"
          "exact text" 1
          "exact text size" 22
          "size to text h" 1
@@ -267,7 +267,7 @@ PanelWidgetClass GesturesMenu {
          hexactsize 1
          vexactsize 1
          text "#menu_back"
-         font "gui/fonts/sdf_MetronLight24"
+         font "gui/fonts/sdf_MetronLight42"
          "exact text" 1
          "exact text size" 22
          "size to text h" 1

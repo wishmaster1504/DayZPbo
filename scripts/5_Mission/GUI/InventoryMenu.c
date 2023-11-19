@@ -23,7 +23,7 @@ class InventoryMenu extends UIScriptedMenu
 		m_Inventory = new Inventory(null);
 		m_Inventory.Reset();
 		m_Inventory.UpdateInterval();
-		m_context_menu = new ContextMenu;
+		m_context_menu = new ContextMenu();
 		m_LastDisplayLanguage = g_Game.GetCurrentDisplayLanguageIdx();
 	}
 	
@@ -121,7 +121,7 @@ class InventoryMenu extends UIScriptedMenu
 		}
 		
 		ItemManager.GetInstance().SetItemMicromanagmentMode( false );
-		ItemManager.GetInstance().SetSelectedItem( null, null, null, null );
+		ItemManager.GetInstance().SetSelectedItemEx(null, null, null);
 
 		m_Inventory.Refresh();
 	}
@@ -153,7 +153,7 @@ class InventoryMenu extends UIScriptedMenu
 		}
 		
 		ItemManager.GetInstance().SetItemMicromanagmentMode( false );
-		ItemManager.GetInstance().SetSelectedItem( null, null, null, null );
+		ItemManager.GetInstance().SetSelectedItemEx(null, null, null);
 		ItemManager.GetInstance().HideTooltip();
 	}
 	

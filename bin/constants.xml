@@ -1,4 +1,4 @@
-<inputs version="137">
+<inputs version="139">
 	
 	<actions>
 		<!-- UAMoveForward == 0 !!! -->
@@ -18,6 +18,8 @@
 		<input name="UAProne" loc="STR_USRACT_PRONE" />
 		<input name="UALeanLeft" loc="STR_USRACT_LEAN_LEFT" />
 		<input name="UALeanRight" loc="STR_USRACT_LEAN_RIGHT" />
+		<input name="UALeanLeftGamepad" loc="STR_USRACT_LEAN_LEFT" visible="false" />
+		<input name="UALeanRightGamepad" loc="STR_USRACT_LEAN_RIGHT" visible="false" />
 		<input name="UALeanIronsightLeft" loc="STR_USRACT_LEAN_IRONSIGHT_LEFT" visible="false" />
 		<input name="UALeanIronsightRight" loc="STR_USRACT_LEAN_IRONSIGHT_RIGHT" visible="false" />
 		<input name="UALeanLeftToggle" loc="STR_USRACT_LEAN_LEFT_TOGGLE" visible="false" />
@@ -43,6 +45,7 @@
 		<input name="UAWeaponMeleeAttack" loc="STR_USRACT_UAHeavyMeleeAttack" />
 		<input name="UAReloadMagazine" loc="STR_USRACT_RELOAD_MAGAZINE" />
 		<input name="UATempRaiseWeapon" loc="STR_USRACT_TEMP_RAISE_WEAPON" />
+		<input name="UATempRaiseWeaponGamepad" loc="STR_USRACT_TEMP_RAISE_WEAPON" visible="false" />
 		<input name="UAToggleRaiseWeapon" loc="" visible="false" />
 		<input name="UATempOptics" loc="" visible="false" />
 
@@ -432,6 +435,7 @@
         <input name="UAAimLeft" />
         <input name="UAAimUp" />
         <input name="UAAimDown" />
+        <input name="UAZoomIn" />
 	</supresscontrol>
 
 	<controller name="PCKeyboard" loc="STR_INPUT_DEVICE_PCKEYBOARD">

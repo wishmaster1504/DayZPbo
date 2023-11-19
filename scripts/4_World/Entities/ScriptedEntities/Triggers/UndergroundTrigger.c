@@ -54,12 +54,10 @@ class UndergroundTriggerCarrier extends UndergroundTriggerCarrierBase
 			UndergroundTrigger trigger = UndergroundTrigger.Cast(GetGame().CreateObjectEx( "UndergroundTrigger", GetPosition(), ECE_LOCAL ));
 			if (trigger)
 			{
-				#ifdef DEVELOPER
+				#ifdef DIAG_DEVELOPER
 				trigger.m_Local = true;
 				#endif
 				trigger.SetPosition(vector.Zero);
-				if (GetOrientation() != vector.Zero)
-					trigger.SetOrientation(GetOrientation());
 				AddChild(trigger,-1);
 				trigger.Init(data);
 				
@@ -133,6 +131,25 @@ class UndergroundTrigger : ManTrigger
 	{
 		//disable parent behaviour
 	}
+	
+	
+	
+	
+	#ifdef DEVELOPER
+	override protected void OnEnterServerEvent(TriggerInsider insider) 
+	{
+		#ifndef SERVER//to make it work in single during development
+		OnEnterClientEvent(insider);
+		#endif
+	}
+	override protected void OnLeaveServerEvent(TriggerInsider insider) 
+	{
+		#ifndef SERVER//to make it work in single during development
+		OnLeaveClientEvent(insider);
+		#endif
+	}
+	#endif
+	
 	override protected void OnEnterClientEvent(TriggerInsider insider) 
 	{
 		//Print("OnEnterClientEvent " + this);
@@ -162,18 +179,5 @@ class UndergroundTrigger : ManTrigger
 			}
 		}
 	}
-	#ifdef DEVELOPER
-	override protected void OnEnterServerEvent(TriggerInsider insider) 
-	{
-		#ifndef SERVER//to make it work in single during development
-		OnEnterClientEvent(insider);
-		#endif
-	}
-	override protected void OnLeaveServerEvent(TriggerInsider insider) 
-	{
-		#ifndef SERVER//to make it work in single during development
-		OnLeaveClientEvent(insider);
-		#endif
-	}
-	#endif
+
 };

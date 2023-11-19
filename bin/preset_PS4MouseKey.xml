@@ -67,14 +67,23 @@
 	<!-- Leaning -->
 	<input name="UALeanLeft">
 		<btn name="kQ" />
-        <btn name="ps4ShoulderLeft" />
 	</input>
 	<input name="UALeanRight">
 		<btn name="kE" />
+	</input>
+	<input name="UALeanLeftGamepad">
+        <btn name="ps4ShoulderLeft" />
+	</input>
+	<input name="UALeanRightGamepad">
         <btn name="ps4ShoulderRight" />
 	</input>
-
+	
 	<!-- CAMERA -->
+	<input name="UAPersonCamSwitchSide">
+		<btn name="ps4ThumbRight" >
+			<event name="holdbegin" />
+		</btn>
+	</input>
 	<input name="UAAimLeft">
 		<btn name="mLeft" />
 		<btn name="ps4RightThumbLeft" />
@@ -279,6 +288,8 @@
 	<!-- Raise Hands -->
 	<input name="UATempRaiseWeapon">
 		<btn name="mBRight" />
+	</input>
+	<input name="UATempRaiseWeaponGamepad">
 		<btn name="ps4TriggerLeft" />
 	</input>
 

@@ -80,6 +80,10 @@ class PrepareChicken extends RecipeBase
 
 	override bool CanDo(ItemBase ingredients[], PlayerBase player)//final check for recipe's validity
 	{
+		if (ingredients[0].GetHealthLevel() == GameConstants.STATE_RUINED)
+		{
+			return false;
+		}
 		return true;
 	}
 	
@@ -96,10 +100,12 @@ class PrepareChicken extends RecipeBase
 			result.SetQuantityNormalized(Math.RandomFloatInclusive(0.8,1));
 		}
 		
-		
+		ItemBase resultFeathers = ItemBase.Cast(player.SpawnEntityOnGroundOnCursorDir("ChickenFeather", DEFAULT_SPAWN_DISTANCE));
+		MiscGameplayFunctions.TransferItemProperties(deadChicken, resultFeathers);
+		resultFeathers.SetQuantity(Math.RandomIntInclusive(5,15));
+				
 		MiscGameplayFunctions.TransferItemProperties(deadChicken, resultBones);
-		resultBones.SetQuantity(Math.RandomIntInclusive(2,5));
-		
+		resultBones.SetQuantity(Math.RandomIntInclusive(2,5));		
 		
 		PluginLifespan lifespan = PluginLifespan.Cast( GetPlugin( PluginLifespan ) );
 		lifespan.UpdateBloodyHandsVisibility( player, true );

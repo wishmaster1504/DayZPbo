@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{8563C7FBD842AB6A}Graphics/Particles/materials/fire/Fireworks_ThankYou_anim.emat"
+ Author "3643"
+ ChangeDate -1990922452
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass LINUX : PC {
+  }
+ }
+}

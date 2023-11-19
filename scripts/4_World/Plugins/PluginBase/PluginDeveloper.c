@@ -1,13 +1,9 @@
+typedef Param7<EntityAI, string, float, float, bool, string, FindInventoryLocationType> DevSpawnItemParams;//(target, item_name, health, quantity, special, presetName, locationType );
 class PluginDeveloper extends PluginBase
 {
 	protected bool									m_IsWinHolding;	
 	protected int									m_FeaturesMask;
 	UIScriptedMenu									m_ScriptConsole;
-	
-	#ifdef DEVELOPER
-	ref PresetSpawnBase 								m_PresetObj;
-	#endif
-	
 	
 	static PluginDeveloper GetInstance()
 	{
@@ -95,7 +91,13 @@ class PluginDeveloper extends PluginBase
 			}
 			case ERPCs.DEV_RPC_SPAWN_PRESET:
 			{
-				HandlePresetSpawn(player,ctx); break;
+				string presetName;
+				EntityAI target;
+				
+				ctx.Read(presetName);
+				ctx.Read(target);
+				
+				HandlePresetSpawn(player,presetName, target); break;
 			}			
 			case ERPCs.DEV_RPC_SET_TIME:
 			{
@@ -194,27 +196,33 @@ class PluginDeveloper extends PluginBase
 		#endif
 	}
 		
-	void HandlePresetSpawn(PlayerBase player, ParamsReadContext ctx)
+	void HandlePresetSpawn(PlayerBase player, string presetName, EntityAI target)
 	{
 		#ifdef DEVELOPER
-		if ( ctx.Read(CachedObjectsParams.PARAM1_STRING ) )
+		
+		PlayerBase targetPlayer = player;
+		
+		if (target)
 		{	
-			player.m_PresetSpawned = true;
-			string preset_name = CachedObjectsParams.PARAM1_STRING.param1;
-			string class_name = preset_name + "_Preset";
-			typename type = class_name.ToType();
-			
-			if (type)
-			{
-				m_PresetObj = PresetSpawnBase.Cast(type.Spawn());
-			}
-			
-			if (m_PresetObj)
-			{
-				m_PresetObj.Init(player);
-			}
-
+			targetPlayer = PlayerBase.Cast(target);
 		}
+		if (!targetPlayer)
+			return;
+		
+		targetPlayer.m_PresetSpawned = true;
+		string class_name = presetName + "_Preset";
+		typename type = class_name.ToType();
+		
+		if (type)
+		{
+			PresetSpawnBase presetObj = PresetSpawnBase.Cast(type.Spawn());
+			
+			if (presetObj)
+			{
+				presetObj.Init(targetPlayer);
+			}
+		}
+
 		#endif
 	}
 	
@@ -247,44 +255,46 @@ class PluginDeveloper extends PluginBase
 	
 	void OnRPCSpawnEntityOnGround(PlayerBase player, ParamsReadContext ctx)
 	{
-		Param4<string, float, float, vector> p = new Param4<string, float, float, vector>("", 0, 0, "0 0 0");
+		Param5<string, float, float, vector, bool> p = new Param5<string, float, float, vector, bool>("", 0, 0, "0 0 0", false);
 		if ( ctx.Read(p) )
 		{
-			SpawnEntityOnGroundPos(player, p.param1, p.param2,  p.param3,  p.param4);
+			SpawnEntityOnGroundPos(player, p.param1, p.param2,  p.param3,  p.param4, p.param5);
 		}
 	}
 	
 	void OnRPCSpawnEntityOnGroundPatternGrid(PlayerBase player, ParamsReadContext ctx)
 	{
-		auto p = new Param8<string,int, float, float, int, int, float, float>("",0,0,0,0,0,0,0);
+		auto p = new Param9<string,int, float, float, int, int, float, float, bool>("",0,0,0,0,0,0,0, false);
 		if ( ctx.Read(p) )
 		{
-			SpawnEntityOnGroundPatternGrid(player, p.param1, p.param2, p.param3, p.param4, p.param5, p.param6, p.param7, p.param8);
+			SpawnEntityOnGroundPatternGrid(player, p.param1, p.param2, p.param3, p.param4, p.param5, p.param6, p.param7, p.param8, p.param9);
 		}
 	}
 	void OnRPCSpawnEntity(PlayerBase player, ParamsReadContext ctx)
 	{
 		#ifdef DEVELOPER
-		Param5<string, float, float,bool, string> p = new Param5<string, float, float, bool, string>("", 0, 0, false, "");
+		DevSpawnItemParams p = new DevSpawnItemParams(null,"", 0, 0, false, "", FindInventoryLocationType.ANY);
 		if ( ctx.Read(p) )
 		{
-			EntityAI ent = SpawnEntityInInventory(player, p.param1, p.param2,  p.param3, p.param4);
-			if (p.param5)
+			EntityAI target = EntityAI.Cast(p.param1);
+			PlayerBase playerTarget = PlayerBase.Cast(target);
+
+			EntityAI ent = SpawnEntityInInventory( target, p.param2,  p.param3, p.param4, p.param5, "", p.param7);
+			if (playerTarget && p.param5)
 			{
-				if (player.m_PresetSpawned)
+				if (playerTarget.m_PresetSpawned)
 				{
-					player.m_PresetSpawned = false;
-					player.m_PresetItems.Clear();
+					playerTarget.m_PresetSpawned = false;
+					playerTarget.m_PresetItems.Clear();
 				}
 				if (ent)
 				{
-					player.m_PresetItems.Insert(ent);
+					playerTarget.m_PresetItems.Insert(ent);
 				}
 			}
 		}
 		#endif
 	}
-
 	
 	void OnSetFreeCameraEvent( PlayerBase player, FreeDebugCamera camera )
 	{
@@ -316,6 +326,13 @@ class PluginDeveloper extends PluginBase
 			ItemBase item = ItemBase.Cast( entity );
 			SetupSpawnedItem(item, health, quantity);
 		}
+		else if (entity.IsInherited(House))
+		{
+			entity.PlaceOnSurface();
+			vector pos = entity.GetPosition();
+			vector ori = GetGame().GetSurfaceOrientation(pos[0], pos[2]);
+			entity.SetOrientation(ori);
+		}
 		if (presetName)
 		{
 			player.m_PresetItems.Insert(entity);
@@ -326,7 +343,7 @@ class PluginDeveloper extends PluginBase
 	}
 	
 	
-	void SpawnEntityOnGroundPatternGrid( PlayerBase player, string item_name, int count, float health, float quantity, int rows, int columns, float gapRow = 1, float gapColumn = 1)
+	void SpawnEntityOnGroundPatternGrid( PlayerBase player, string item_name, int count, float health, float quantity, int rows, int columns, float gapRow = 1, float gapColumn = 1, bool special= false)
 	{
 		if (!item_name)
 		{
@@ -351,7 +368,7 @@ class PluginDeveloper extends PluginBase
 					offsetSide = camDirRight * columnDist;
 					vector placement = posRow + offsetSide;
 					float hlth = health * MiscGameplayFunctions.GetTypeMaxGlobalHealth( item_name );
-					EntityAI ent = SpawnEntityOnGroundPos(player, item_name, hlth, quantity, placement );
+					EntityAI ent = SpawnEntityOnGroundPos(player, item_name, hlth, quantity, placement, special );
 					ent.PlaceOnSurface();
 					countLoop++;
 					if (countLoop == count)
@@ -365,12 +382,41 @@ class PluginDeveloper extends PluginBase
 		}
 		else
 		{
-			auto params = new Param8<string, int, float, float, int, int, float, float>(item_name, count, health, quantity, rows, columns, gapRow, gapColumn);
+			auto params = new Param9<string, int, float, float, int, int, float, float, bool>(item_name, count, health, quantity, rows, columns, gapRow, gapColumn, special);
 			player.RPCSingleParam(ERPCs.DEV_RPC_SPAWN_ITEM_ON_GROUND_PATTERN_GRID, params, true);
 		}
 	}
 	
-	
+	void SpawnItemOnCrosshair(notnull PlayerBase player, string itemName, float health, float quantity, float maxDist = 100, bool allowFreeflight = false, bool special = false)
+	{
+		vector from, to;
+		if (allowFreeflight && FreeDebugCamera.GetInstance().IsActive())
+		{
+			from = FreeDebugCamera.GetInstance().GetPosition();
+			to = from + FreeDebugCamera.GetInstance().GetDirection() * maxDist;
+		}
+		else
+		{
+			from = GetGame().GetCurrentCameraPosition();
+			to = from + GetGame().GetCurrentCameraDirection() * maxDist;	
+		}
+		
+		float hitFraction;
+		vector start, end;
+		vector direction;
+
+		vector hitPos, hitNormal;
+		Object obj;
+		
+		PhxInteractionLayers hitMask =  PhxInteractionLayers.BUILDING | PhxInteractionLayers.DOOR | PhxInteractionLayers.VEHICLE | PhxInteractionLayers.ROADWAY | PhxInteractionLayers.TERRAIN | PhxInteractionLayers.CHARACTER | PhxInteractionLayers.AI | PhxInteractionLayers.RAGDOLL | PhxInteractionLayers.RAGDOLL_NO_CHARACTER;
+		DayZPhysics.RayCastBullet(from, to, hitMask, player, obj, hitPos, hitNormal, hitFraction);
+		
+		// something is hit
+		if (hitPos != vector.Zero)
+		{
+			SpawnEntityOnGroundPos(player, itemName, health, quantity, hitPos, special);
+		}
+	}
 	
 	/**
 	 * @fn		SpawnEntityOnGroundPos
@@ -380,20 +426,20 @@ class PluginDeveloper extends PluginBase
 	 * @param[in]	pos	\p	position where to spawn
 	 * @return	entity if ok, null otherwise
 	 **/
-	EntityAI SpawnEntityOnGroundPos( PlayerBase player, string item_name, float health, float quantity, vector pos)
+	EntityAI SpawnEntityOnGroundPos( PlayerBase player, string item_name, float health, float quantity, vector pos, bool special = false)
 	{
 		if ( GetGame().IsServer() )
 		{		
 			EntityAI entity = player.SpawnEntityOnGroundPos(item_name, pos);
 			if (entity)
-				SetupSpawnedEntity(player, entity, health, quantity);
+				SetupSpawnedEntity(player, entity, health, quantity, special);
 			else
 				OnSpawnErrorReport(item_name);
 			return entity;
 		}
 		else
 		{		
-			Param4<string, float, float, vector> params = new Param4<string, float, float, vector>(item_name, health, quantity, pos);
+			Param5<string, float, float, vector, bool> params = new Param5<string, float, float, vector, bool>(item_name, health, quantity, pos, special);
 			player.RPCSingleParam(ERPCs.DEV_RPC_SPAWN_ITEM_ON_GROUND, params, true);
 		}
 		return NULL;
@@ -416,7 +462,7 @@ class PluginDeveloper extends PluginBase
 			
 			if ( entity )
 			{
-				if ( health < 0 && entity.GetMaxHealth() > 0)//check for default (-1)
+				if ( !entity.IsBuilding() && health < 0 && entity.GetMaxHealth() > 0)//check for default (-1)
 				{
 					health = entity.GetMaxHealth();
 				}
@@ -444,15 +490,59 @@ class PluginDeveloper extends PluginBase
 	 * @param[in]	quantity	\p	quantity to set if item.HasQuantity() (-1 == set to max)
 	 * @return	entity if ok, null otherwise
 	 **/
-	EntityAI SpawnEntityInInventory( PlayerBase player, string item_name, float health, float quantity, bool special = false, string presetName = "")
+	EntityAI SpawnEntityInInventory( notnull EntityAI target, string className, float health, float quantity, bool special = false, string presetName = "", FindInventoryLocationType locationType = FindInventoryLocationType.ANY)
+	{
+		if (target.IsPlayer())
+		{
+			return SpawnEntityInPlayerInventory(PlayerBase.Cast(target), className, health, quantity, special, presetName, locationType);
+		}
+		if ( GetGame().IsServer() )
+		{
+			InventoryLocation il = new InventoryLocation;
+			if (target.GetInventory() && target.GetInventory().FindFirstFreeLocationForNewEntity(className, FindInventoryLocationType.ANY, il))
+			{
+				EntityAI eai = SpawnEntity(className, il, ECE_IN_INVENTORY, RF_DEFAULT);
+				if ( eai && eai.IsInherited(ItemBase) )
+				{
+					if ( health < 0 )//check for default (-1)
+					{
+						health = eai.GetMaxHealth();
+					}
+					ItemBase i = ItemBase.Cast( eai );
+					SetupSpawnedItem(i, health, quantity);
+					if ( special )
+						eai.OnDebugSpawn();
+				}
+				return eai;
+			}
+		}
+		else
+		{
+			DevSpawnItemParams params = new DevSpawnItemParams(target, className, health, quantity, special, presetName, 0 );
+				GetGame().GetPlayer().RPCSingleParam(ERPCs.DEV_RPC_SPAWN_ITEM_IN_INVENTORY, params, true, GetGame().GetPlayer().GetIdentity());
+		}
+		return null;
+	}
+	
+	EntityAI SpawnEntityInPlayerInventory(PlayerBase player, string item_name, float health, float quantity, bool special = false, string presetName = "", FindInventoryLocationType locationType = FindInventoryLocationType.ANY)
 	{
 		if ( player )
 		{
 			if ( GetGame().IsServer() )
-			{		
-				#ifdef DEVELOPER
+			{
+				if (locationType == FindInventoryLocationType.HANDS && player.GetItemInHands())
+				{
+					if (!GetGame().IsMultiplayer())
+						player.DropItem(player.GetItemInHands());
+					else
+						player.ServerDropEntity(player.GetItemInHands());
+					GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SpawnEntityInPlayerInventory,100, false, player, item_name, health, quantity, special, presetName, locationType);
+					return null;
+				}
+			
 				
-				if (GetGame().IsKindOf(item_name, "Car"))
+				#ifdef DEVELOPER
+				if (GetGame().IsKindOf(item_name, "Transport"))
 				{
 					EntityAI car = SpawnEntityOnGroundPos(player, item_name, 1, quantity, player.GetPosition());
 					car.OnDebugSpawn();
@@ -465,10 +555,13 @@ class PluginDeveloper extends PluginBase
 					{
 						player.SetGetInVehicleDebug(car);
 					}
+
+					return car;
 				}
 				#endif
+
 				InventoryLocation il = new InventoryLocation;
-				if (player.GetInventory() && player.GetInventory().FindFirstFreeLocationForNewEntity(item_name, FindInventoryLocationType.ANY, il))
+				if (player.GetInventory() && player.GetInventory().FindFirstFreeLocationForNewEntity(item_name, locationType, il))
 				{
 					Weapon_Base wpn = Weapon_Base.Cast(il.GetParent());
 					bool is_mag = il.GetSlot() == InventorySlots.MAGAZINE || il.GetSlot() == InventorySlots.MAGAZINE2 || il.GetSlot() == InventorySlots.MAGAZINE3;
@@ -485,7 +578,7 @@ class PluginDeveloper extends PluginBase
 					}
 					else
 					{
-						EntityAI eai = GetGame().SpawnEntity(item_name, il, ECE_IN_INVENTORY, RF_DEFAULT);
+						EntityAI eai = SpawnEntity(item_name, il, ECE_IN_INVENTORY, RF_DEFAULT);
 						if ( eai && eai.IsInherited(ItemBase) )
 						{
 							if ( health < 0 )//check for default (-1)
@@ -507,7 +600,7 @@ class PluginDeveloper extends PluginBase
 			else
 			{		
 				// Client -> Server Spawning: Client Side
-				Param5<string, float, float, bool, string> params = new Param5<string, float, float, bool, string>(item_name, health, quantity, special, presetName );
+				DevSpawnItemParams params = new DevSpawnItemParams(player, item_name, health, quantity, special, presetName, locationType );
 				player.RPCSingleParam(ERPCs.DEV_RPC_SPAWN_ITEM_IN_INVENTORY, params, true);
 			}
 		}
@@ -579,46 +672,52 @@ class PluginDeveloper extends PluginBase
 				{
 					player.SetIsInThirdPerson(!player.IsInThirdPerson());//this counters the effect of switching camera through pressing the 'V' key
 				}
-				
-				vector pos_player = player.GetPosition();
-				
-				// Get item from clipboard
-				string		clipboard;
-				GetGame().CopyFromClipboard(clipboard);
-							
-				if (!clipboard.Contains(","))
-				{
-					//single item
-					EntityAI object_spawned_from_clipboard = SpawnEntityOnCursorDir(player, clipboard, -1, 1);
-					//Print(object_spawned_from_clipboard);	
-				}
-				else
-				{
-					TStringArray items = new TStringArray;
-					clipboard.Split( ",", items );
+
+					vector pos_player = player.GetPosition();
 					
-					foreach(string item:items)
+					// Get item from clipboard
+					string		clipboard;
+					GetGame().CopyFromClipboard(clipboard);
+								
+					if (!clipboard.Contains(","))
 					{
-						SpawnEntityOnCursorDir(player, item.Trim(), -1, 1);
+						//single item
+						if (DeveloperFreeCamera.IsFreeCameraEnabled())
+							SpawnItemOnCrosshair(player, clipboard.Trim(), -1, 1, 40, true );
+						else
+							SpawnEntityOnCursorDir(player, clipboard.Trim(), 1, 1);
 					}
-				}
+					else
+					{
+						TStringArray items = new TStringArray;
+						clipboard.Split( ",", items );
+						
+						foreach (string item:items)
+						{
+							if (DeveloperFreeCamera.IsFreeCameraEnabled())
+								SpawnItemOnCrosshair(player, item.Trim(), -1, 1, 40, true );
+							else
+								SpawnEntityOnCursorDir(player, item.Trim(), 1, 1);
+						}
+					}
+				
 			}
 		}
 		
 		return NULL;
 	}
 	
-	// Clear Player Inventory
-	void ClearInventory(PlayerBase player)
+	// Clear Entity Inventory
+	void ClearInventory(EntityAI entity)
 	{
 		if ( GetGame().IsServer() )
 		{
-			player.ClearInventory();
+			entity.ClearInventory();
 		}
 		else
 		{
 			Param1<int> params = new Param1<int>(0);
-			player.RPCSingleParam(ERPCs.DEV_RPC_CLEAR_INV, params, true);
+			entity.RPCSingleParam(ERPCs.DEV_RPC_CLEAR_INV, params, true);
 		}
 	}	
 	
@@ -636,12 +735,13 @@ class PluginDeveloper extends PluginBase
 
 	void ToggleScriptConsole()
 	{
-		if ( GetGame() != null && GetGame().GetPlayer() != null )
+		if (GetGame() != null && !g_Game.IsLoading() && GetGame().GetMission())
 		{
 			if ( g_Game.GetUIManager().GetMenu() == NULL )
 			{
 				m_ScriptConsole = g_Game.GetUIManager().EnterScriptedMenu(MENU_SCRIPTCONSOLE, NULL);
 				GetGame().GetMission().AddActiveInputExcludes({"menu"});
+				
 			}
 			else if ( g_Game.GetUIManager().IsMenuOpen(MENU_SCRIPTCONSOLE) )
 			{
@@ -654,7 +754,20 @@ class PluginDeveloper extends PluginBase
 	// Mission Editor
 	void ToggleMissionLoader()
 	{
-		g_Game.GetUIManager().OpenWindow( GUI_WINDOW_MISSION_LOADER );
+		if ( g_Game.GetUIManager().IsMenuOpen(MENU_MISSION_LOADER) )
+		{
+			g_Game.GetUIManager().Back();
+			GetGame().GetMission().RemoveActiveInputExcludes({"menu"},true);
+			return;
+		}
+
+		if ( g_Game.GetUIManager().GetMenu() )
+			g_Game.GetUIManager().GetMenu().Close();
+		
+		g_Game.GetUIManager().EnterScriptedMenu(MENU_MISSION_LOADER, NULL);
+		GetGame().GetMission().AddActiveInputExcludes({"menu"});
+		
+		
 	}
 	
 	// Script Editor History

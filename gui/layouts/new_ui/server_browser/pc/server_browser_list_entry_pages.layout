@@ -311,7 +311,7 @@ GridSpacerWidgetClass server_browser_list_entry_root {
        vexactpos 1
        hexactsize 0
        vexactsize 0
-       text "#server_browser_entry_low"
+       text "0/60"
        font "gui/fonts/sdf_MetronLight24"
        "exact text" 0
        "exact text size" 18
@@ -321,6 +321,7 @@ GridSpacerWidgetClass server_browser_list_entry_root {
      }
     }
     FrameWidgetClass server_slots_panel {
+     visible 0
      clipchildren 1
      ignorepointer 1
      size 120 30

@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{9D3C418787738634}Graphics/Particles/materials/fire/Fireworks_For10_anim.emat"
+ Author "3643"
+ ChangeDate -1687883988
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass LINUX : PC {
+  }
+ }
+}

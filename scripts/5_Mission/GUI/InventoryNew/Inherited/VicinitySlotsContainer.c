@@ -73,14 +73,6 @@ class VicinitySlotsContainer: Container
 		return ent.IsTakeable();
 	}
 	
-	override bool CanCombine()
-	{
-		ItemBase ent = ItemBase.Cast(  GetFocusedItem() );
-		ItemBase item_in_hands = ItemBase.Cast(	GetGame().GetPlayer().GetHumanInventory().GetEntityInHands() );
-		
-		return ( ItemManager.GetCombinationFlags( item_in_hands, ent ) != 0 );
-	}
-	
 	override bool CanCombineAmmo()
 	{
 		PlayerBase m_player = PlayerBase.Cast( GetGame().GetPlayer() );
@@ -92,35 +84,24 @@ class VicinitySlotsContainer: Container
 		return ( amc.CanPerformActionFromInventory( item_in_hands, ent ) || amc.CanSetActionFromInventory( item_in_hands, ent ) );
 	}
 	
-	override bool CanEquip()
-	{
-		EntityAI ent = GetFocusedItem();
-		InventoryLocation il = new InventoryLocation;
-		bool found = GetGame().GetPlayer().GetInventory().FindFreeLocationFor(ent,FindInventoryLocationType.ATTACHMENT,il);
-		if (found)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	
 	override bool EquipItem()
 	{
-		EntityAI ent = GetFocusedItem();
-		bool res = false;
-		
-		if( ent && !ent.IsInherited( Magazine ))
-		{
-			res = GetGame().GetPlayer().PredictiveTakeOrSwapAttachment( ent );
-			if(!res)
+		if (CanEquip())
+		{	
+			EntityAI ent = GetFocusedItem();
+			bool res = false;
+			
+			if( ent && !ent.IsInherited( Magazine ))
 			{
-				res = GetGame().GetPlayer().GetInventory().TakeEntityToInventory(InventoryMode.PREDICTIVE,FindInventoryLocationType.ATTACHMENT,ent);
+				res = GetGame().GetPlayer().PredictiveTakeOrSwapAttachment( ent );
+				if(!res)
+				{
+					res = GetGame().GetPlayer().GetInventory().TakeEntityToInventory(InventoryMode.PREDICTIVE,FindInventoryLocationType.ATTACHMENT,ent);
+				}
 			}
+			return res;
 		}
-		return res;
+		return false;
 	}
 	
 	override bool InspectItem()
@@ -137,24 +118,27 @@ class VicinitySlotsContainer: Container
 		
 	override bool TransferItem()
 	{
-		ItemBase ent = ItemBase.Cast( GetFocusedItem() );
-		if( ent )
+		if (CanTakeToInventory())
 		{
-			if ( ent.IsTakeable() )
+			ItemBase ent = ItemBase.Cast(GetFocusedItem());
+			if (ent)
 			{
-				InventoryLocation il = new InventoryLocation;
-				GetGame().GetPlayer().GetInventory().FindFreeLocationFor( ent, FindInventoryLocationType.CARGO, il );
-				if( il.IsValid() && GetGame().GetPlayer().GetInventory().LocationCanAddEntity( il ) )
+				if (ent.IsTakeable())
 				{
-					SplitItemUtils.TakeOrSplitToInventoryLocation( PlayerBase.Cast( GetGame().GetPlayer() ), il );
-					return true;
+					InventoryLocation il = new InventoryLocation;
+					GetGame().GetPlayer().GetInventory().FindFreeLocationFor( ent, FindInventoryLocationType.CARGO, il );
+					if (il.IsValid() && GetGame().GetPlayer().GetInventory().LocationCanAddEntity( il ))
+					{
+						SplitItemUtils.TakeOrSplitToInventoryLocation( PlayerBase.Cast( GetGame().GetPlayer() ), il );
+						return true;
+					}
 				}
 			}
 		}
 		return false;
 	}
 	
-	override bool Combine( )
+	override bool Combine()
 	{
 		ItemBase ent = ItemBase.Cast( GetFocusedItem() );
 		
@@ -195,7 +179,7 @@ class VicinitySlotsContainer: Container
 								selected_item.SplitIntoStackMaxClient( null, -1 );
 							else
 								player.PhysicalPredictiveDropItem( selected_item );
-							ItemManager.GetInstance().SetSelectedItem( null, null, null, null );
+							ItemManager.GetInstance().SetSelectedItemEx(null, null, null);
 							return true;
 						}
 					}
@@ -353,7 +337,7 @@ class VicinitySlotsContainer: Container
 	
 	void DoubleClick(Widget w, int x, int y, int button)
 	{
-		if( button == MouseState.LEFT )
+		if( button == MouseState.LEFT && !g_Game.IsLeftCtrlDown())
 		{
 			if( w == null )
 			{
@@ -511,14 +495,6 @@ class VicinitySlotsContainer: Container
 		ItemPreviewWidget item_preview = ItemPreviewWidget.Cast( w.FindAnyWidget( name ) );
 		ItemBase item = ItemBase.Cast( item_preview.GetItem() );
 		bool draggable = ItemManager.GetInstance().EvaluateContainerDragabilityDefault(item);
-		#ifdef DIAG_DEVELOPER
-		if ( item )
-		{
-			if ( GetDayZGame().IsLeftCtrlDown() )
-				ShowActionMenu( item );
-		}
-		#endif
-		
 		ItemManager.GetInstance().SetWidgetDraggable( w, draggable );
 	}
 	
@@ -531,6 +507,14 @@ class VicinitySlotsContainer: Container
 		EntityAI item = item_preview.GetItem();
 		InventoryItem itemAtPos = InventoryItem.Cast( item );
 		Container conta;
+		
+		#ifdef DIAG_DEVELOPER
+		if ( ItemBase.Cast(item) )
+		{
+			if ( GetDayZGame().IsLeftCtrlDown() && button == MouseState.RIGHT )
+				ShowActionMenu( ItemBase.Cast(item) );
+		}
+		#endif
 		
 		if( m_Parent )
 		{

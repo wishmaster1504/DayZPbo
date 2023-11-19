@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{7238AE948F48540C}Graphics/Particles/materials/fire/Fireworks_Amazing_anim.emat"
+ Author "3643"
+ ChangeDate -1652756692
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass LINUX : PC {
+  }
+ }
+}

@@ -215,7 +215,7 @@ GridSpacerWidgetClass height_wrapper {
          vexactsize 0
          style rover_sim_colorable
         }
-        PanelWidgetClass Selected0 {
+        PanelWidgetClass Cursor0 {
          visible 0
          clipchildren 1
          ignorepointer 1
@@ -233,7 +233,7 @@ GridSpacerWidgetClass height_wrapper {
       }
      }
     }
-	PanelWidgetClass EmptySelected0 {
+    PanelWidgetClass EmptySelected0 {
      visible 0
      clipchildren 1
      ignorepointer 1
@@ -524,7 +524,7 @@ GridSpacerWidgetClass height_wrapper {
          vexactsize 0
          style rover_sim_colorable
         }
-        PanelWidgetClass Selected1 {
+        PanelWidgetClass Cursor1 {
          visible 0
          clipchildren 1
          ignorepointer 1
@@ -542,7 +542,7 @@ GridSpacerWidgetClass height_wrapper {
       }
      }
     }
-	PanelWidgetClass EmptySelected1 {
+    PanelWidgetClass EmptySelected1 {
      visible 0
      clipchildren 1
      ignorepointer 1
@@ -830,7 +830,7 @@ GridSpacerWidgetClass height_wrapper {
          vexactsize 0
          style rover_sim_colorable
         }
-        PanelWidgetClass Selected2 {
+        PanelWidgetClass Cursor2 {
          visible 0
          clipchildren 1
          ignorepointer 1
@@ -848,7 +848,7 @@ GridSpacerWidgetClass height_wrapper {
       }
      }
     }
-	PanelWidgetClass EmptySelected2 {
+    PanelWidgetClass EmptySelected2 {
      visible 0
      clipchildren 1
      ignorepointer 1
@@ -1136,7 +1136,7 @@ GridSpacerWidgetClass height_wrapper {
          vexactsize 0
          style rover_sim_colorable
         }
-        PanelWidgetClass Selected3 {
+        PanelWidgetClass Cursor3 {
          visible 0
          clipchildren 1
          ignorepointer 1
@@ -1154,7 +1154,7 @@ GridSpacerWidgetClass height_wrapper {
       }
      }
     }
-	PanelWidgetClass EmptySelected3 {
+    PanelWidgetClass EmptySelected3 {
      visible 0
      clipchildren 1
      ignorepointer 1
@@ -1442,7 +1442,7 @@ GridSpacerWidgetClass height_wrapper {
          vexactsize 0
          style rover_sim_colorable
         }
-        PanelWidgetClass Selected4 {
+        PanelWidgetClass Cursor4 {
          visible 0
          clipchildren 1
          ignorepointer 1
@@ -1460,7 +1460,7 @@ GridSpacerWidgetClass height_wrapper {
       }
      }
     }
-	PanelWidgetClass EmptySelected4 {
+    PanelWidgetClass EmptySelected4 {
      visible 0
      clipchildren 1
      ignorepointer 1
@@ -1748,7 +1748,7 @@ GridSpacerWidgetClass height_wrapper {
          vexactsize 0
          style rover_sim_colorable
         }
-        PanelWidgetClass Selected5 {
+        PanelWidgetClass Cursor5 {
          visible 0
          clipchildren 1
          ignorepointer 1
@@ -1766,7 +1766,7 @@ GridSpacerWidgetClass height_wrapper {
       }
      }
     }
-	PanelWidgetClass EmptySelected5 {
+    PanelWidgetClass EmptySelected5 {
      visible 0
      clipchildren 1
      ignorepointer 1
@@ -2054,7 +2054,7 @@ GridSpacerWidgetClass height_wrapper {
          vexactsize 0
          style rover_sim_colorable
         }
-        PanelWidgetClass Selected6 {
+        PanelWidgetClass Cursor6 {
          visible 0
          clipchildren 1
          ignorepointer 1
@@ -2072,7 +2072,7 @@ GridSpacerWidgetClass height_wrapper {
       }
      }
     }
-	PanelWidgetClass EmptySelected6 {
+    PanelWidgetClass EmptySelected6 {
      visible 0
      clipchildren 1
      ignorepointer 1
@@ -2361,7 +2361,7 @@ GridSpacerWidgetClass height_wrapper {
          vexactsize 0
          style rover_sim_colorable
         }
-        PanelWidgetClass Selected7 {
+        PanelWidgetClass Cursor7 {
          visible 0
          clipchildren 1
          ignorepointer 1
@@ -2379,7 +2379,7 @@ GridSpacerWidgetClass height_wrapper {
       }
      }
     }
-	PanelWidgetClass EmptySelected7 {
+    PanelWidgetClass EmptySelected7 {
      visible 0
      clipchildren 1
      ignorepointer 1

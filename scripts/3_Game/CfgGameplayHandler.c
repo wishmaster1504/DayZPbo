@@ -49,8 +49,17 @@ class CfgGameplayHandler
 			GetGame().GetWorldName( m_Path );
 			m_Path = string.Format("DZ/worlds/%1/ce/cfgGameplay.json", m_Path );
 		}
+
+		bool cfgGameplayFileEnabled = GetGame().ServerConfigGetInt( "enableCfgGameplayFile" );
+
+#ifdef DIAG_DEVELOPER
+		if (!GetGame().IsDedicatedServer())
+		{
+			cfgGameplayFileEnabled = true;
+		}
+#endif
 		
-		if (!GetGame().ServerConfigGetInt( "enableCfgGameplayFile" ) || !FileExist( m_Path ))
+		if (!cfgGameplayFileEnabled || !FileExist( m_Path ))
 		{
 			m_Data.InitServer();//legacy call
 			InitData();
@@ -70,7 +79,6 @@ class CfgGameplayHandler
 	{
 		GetGame().GetMission().OnGameplayDataHandlerLoad();
 		DayZGame.Cast(GetGame()).OnGameplayDataHandlerLoad();
-		ObjectSpawnerHandler.OnGameplayDataHandlerLoad();
 	}
 	
 	//---------------------------------------------------------------------------------------
@@ -164,6 +172,11 @@ class CfgGameplayHandler
 		return m_Data.GeneralData.disableRespawnDialog;
 	}
 	//----------------------------------------------------------------------------------
+	static bool GetDisableRespawnInUnconsciousness()
+	{
+		return m_Data.GeneralData.disableRespawnInUnconsciousness;
+	}
+	//----------------------------------------------------------------------------------
 	static float GetSprintStaminaModifierErc()
 	{
 		return m_Data.PlayerData.StaminaData.sprintStaminaModifierErc;
@@ -202,7 +215,7 @@ class CfgGameplayHandler
 	{
 		return m_Data.PlayerData.StaminaData.staminaMinCap;
 	}
-	//----------------------------------------------------------------------------------	
+	//----------------------------------------------------------------------------------
 	static float GetMeleeStaminaModifier()
 	{
 		return m_Data.PlayerData.StaminaData.meleeStaminaModifier;
@@ -313,6 +326,11 @@ class CfgGameplayHandler
 		return m_Data.BaseBuildingData.ConstructionData.disableDistanceCheck;
 	}
 	//----------------------------------------------------------------------------------
+	static TStringSet GetDisallowedTypesInUnderground()
+	{
+		return m_Data.BaseBuildingData.HologramData.disallowedTypesInUnderground;
+	}
+	//----------------------------------------------------------------------------------
 	static bool GetHitIndicationOverrideEnabled() //TODO - ?
 	{
 		return m_Data.UIData.HitIndicationData.hitDirectionOverrideEnabled;
@@ -412,6 +430,11 @@ class CfgGameplayHandler
 	static bool GetAllowStaminaAffectInertia()
 	{
 		return m_Data.PlayerData.MovementData.allowStaminaAffectInertia;
+	}
+	//----------------------------------------------------------------------------------
+	static TStringArray GetPlayerSpawnGearPresetFiles()
+	{
+		return m_Data.PlayerData.spawnGearPresetFiles;
 	}
 	//----------------------------------------------------------------------------------
 }

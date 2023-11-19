@@ -24,12 +24,12 @@ class OpenCan extends RecipeBase
 		
 		//INGREDIENTS
 		//ingredient 1
-		InsertIngredient(0,"BakedBeansCan");//you can insert multiple ingredients this way
-		InsertIngredient(0,"PeachesCan");//you can insert multiple ingredients this way
-		InsertIngredient(0,"TacticalBaconCan");//you can insert multiple ingredients this way
-		InsertIngredient(0,"SpaghettiCan");//you can insert multiple ingredients this way
-		InsertIngredient(0,"SardinesCan");//you can insert multiple ingredients this way
-		InsertIngredient(0,"UnknownFoodCan");//you can insert multiple ingredients this way
+		InsertIngredientEx(0,"BakedBeansCan", "openBeanCan");//you can insert multiple ingredients this way
+		InsertIngredientEx(0,"PeachesCan", "openBeanCan");//you can insert multiple ingredients this way
+		InsertIngredientEx(0,"TacticalBaconCan", "openBeanCan");//you can insert multiple ingredients this way
+		InsertIngredientEx(0,"SpaghettiCan", "openBeanCan");//you can insert multiple ingredients this way
+		InsertIngredientEx(0,"SardinesCan", "openBeanCan");//you can insert multiple ingredients this way
+		InsertIngredientEx(0,"UnknownFoodCan", "openBeanCan");//you can insert multiple ingredients this way
 		
 		m_IngredientAddHealth[0] = 0;// 0 = do nothing
 		m_IngredientSetHealth[0] = -1; // -1 = do nothing
@@ -60,6 +60,7 @@ class OpenCan extends RecipeBase
 		InsertIngredient(1,"FieldShovel");
 		InsertIngredient(1,"Crowbar");
 		InsertIngredient(1,"Hammer");
+		InsertIngredient(1,"Mace");
 		InsertIngredient(1,"Wrench");
 		InsertIngredient(1,"LugWrench");
 		InsertIngredient(1,"Screwdriver");
@@ -79,6 +80,7 @@ class OpenCan extends RecipeBase
 		InsertIngredient(1,"BoneKnife");
 		InsertIngredient(1,"MeatTenderizer");
 		InsertIngredient(1,"Cleaver");
+		InsertIngredient(1,"Sword");
 		
 		m_IngredientAddHealth[1] = -0.5;// 0 = do nothing
 		m_IngredientSetHealth[1] = -1; // -1 = do nothing

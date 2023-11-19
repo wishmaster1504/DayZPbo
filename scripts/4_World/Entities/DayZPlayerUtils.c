@@ -1,3 +1,16 @@
+enum QueryFlags
+{
+	NONE,
+	//! Static objects are included in the query
+	STATIC,
+	//! Dynamic objects are included in the query
+	DYNAMIC,
+	//! Check only distance to object origins, not BB
+	ORIGIN_DISTANCE,
+	//! Only roadways are included in the query
+	ONLY_ROADWAYS,
+}
+
 // *************************************************************************************
 // ! DayZPlayerUtils - some utils used for dayz player - static functions
 // *************************************************************************************
@@ -50,7 +63,7 @@ class DayZPlayerUtils
 	// From Physics World
 
 	//! returns entities  overlapping/touching in AABB box -
-	static proto native void 		PhysicsGetEntitiesInBox(vector min, vector max, out array<EntityAI> entList);
+	static proto native void 		PhysicsGetEntitiesInBox(vector min, vector max, notnull out array<EntityAI> entList);
 
 
 
@@ -59,7 +72,7 @@ class DayZPlayerUtils
 	// From Scene
 
 	//! returns entities overlapping/touching in AABB box - 
-	static proto native void 		SceneGetEntitiesInBox(vector min, vector max, out array<EntityAI> entList);
+	static proto native void 		SceneGetEntitiesInBox(vector min, vector max, notnull out array<EntityAI> entList, int flags = QueryFlags.DYNAMIC);
 
 
 
@@ -210,7 +223,7 @@ class DayZPlayerUtils
 			InventoryLocation inv_loc = new InventoryLocation;
 			if (player.GetInventory().FindFirstFreeLocationForNewEntity(magTypeName, FindInventoryLocationType.ANY, inv_loc))
 			{
-				EntityAI eai_inv = GetGame().SpawnEntity(magTypeName, inv_loc, ECE_IN_INVENTORY, RF_DEFAULT);
+				EntityAI eai_inv = SpawnEntity(magTypeName, inv_loc, ECE_IN_INVENTORY, RF_DEFAULT);
 				if (eai_inv && eai_inv.IsInherited(Magazine))
 				{
 					Magazine mag_inv;
@@ -242,7 +255,9 @@ class DayZPlayerUtils
 	{
 		vector m4[4];
 		Math3D.MatrixIdentity4(m4);
-		GameInventory.PrepareDropEntityPos(player, mag, m4);
+
+		//! We don't care if a valid transform couldn't be found, we just want to preferably use it instead of placing on the player
+		GameInventory.PrepareDropEntityPos(player, mag, m4, false, -1);
 		InventoryLocation il_mag_next = new InventoryLocation;
 		il_mag_next.SetGround(mag, m4);
 		InventoryLocation il_mag_curr = new InventoryLocation;
@@ -320,7 +335,7 @@ class DayZPlayerUtils
 			InventoryLocation inv_loc = new InventoryLocation;
 			if (player.GetInventory().FindFirstFreeLocationForNewEntity(magTypeName, FindInventoryLocationType.ANY, inv_loc))
 			{
-				EntityAI eai_inv = GetGame().SpawnEntity(magTypeName, inv_loc, ECE_IN_INVENTORY, RF_DEFAULT);
+				EntityAI eai_inv = SpawnEntity(magTypeName, inv_loc, ECE_IN_INVENTORY, RF_DEFAULT);
 				if (eai_inv && eai_inv.IsInherited(Magazine))
 				{
 					Magazine mag_inv;

@@ -83,8 +83,8 @@ FrameWidgetClass FrameWidget0 {
    "exact text" 0
   }
   TextWidgetClass w_ClassName {
-   position 68.506 -25.5715
-   size 321.76001 39.776
+   position 116.872 -25.5715
+   size 273.39398 39.776
    hexactpos 1
    vexactpos 1
    hexactsize 1
@@ -96,7 +96,7 @@ FrameWidgetClass FrameWidget0 {
    "exact text" 1
   }
   TextListboxWidgetClass w_FloatsProper {
-   position 37.0983 614.81598
+   position 33.765 689.26001
    size 336 211.543
    hexactpos 1
    vexactpos 1
@@ -110,7 +110,7 @@ FrameWidgetClass FrameWidget0 {
    lines 10
   }
   TextWidgetClass TextWidget4 {
-   position 38.903 586.59802
+   position 35.5697 661.04199
    size 336 27
    hexactpos 1
    vexactpos 1
@@ -187,7 +187,7 @@ FrameWidgetClass FrameWidget0 {
   }
   WindowWidgetClass WindowWidget1 {
    color 0.4353 0.4353 0.4353 1
-   position 38.0006 588.20001
+   position 34.6673 662.64398
    size 336 24
    hexactpos 1
    vexactpos 1
@@ -242,42 +242,6 @@ FrameWidgetClass FrameWidget0 {
    style Normal
    font "gui/fonts/MetronBook22"
    "exact text" 1
-  }
-  ButtonWidgetClass DebugButton4 {
-   position 0.51981 0.95746
-   size 0.45769 0.03406
-   hexactpos 0
-   vexactpos 0
-   hexactsize 0
-   vexactsize 0
-   text "DebugButton"
-  }
-  ButtonWidgetClass DebugButton2 {
-   position 0.51981 0.91374
-   size 0.45769 0.03406
-   hexactpos 0
-   vexactpos 0
-   hexactsize 0
-   vexactsize 0
-   text "DebugButton"
-  }
-  ButtonWidgetClass DebugButton3 {
-   position 0.0292 0.95746
-   size 0.45769 0.03406
-   hexactpos 0
-   vexactpos 0
-   hexactsize 0
-   vexactsize 0
-   text "DebugButton"
-  }
-  ButtonWidgetClass DebugButton1 {
-   position 0.0292 0.91374
-   size 0.45769 0.03406
-   hexactpos 0
-   vexactpos 0
-   hexactsize 0
-   vexactsize 0
-   text "DebugButton"
   }
   TextWidgetClass CloseTip {
    position 1.888 -74.1041

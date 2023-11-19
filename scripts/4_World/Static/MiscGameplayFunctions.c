@@ -144,7 +144,8 @@ class DropEquipAndDestroyRootLambda : ReplaceItemWithNewLambdaBase
 				vector m4[4];
 				Math3D.MatrixIdentity4(m4);
 				
-				GameInventory.PrepareDropEntityPos(old_item, child, m4, false);
+				//! We don't care if a valid transform couldn't be found, we just want to preferably use it instead of placing on the old item
+				GameInventory.PrepareDropEntityPos(old_item, child, m4, false, -1);
 				
 				child_dst.SetGround(child,m4);
 				
@@ -277,10 +278,10 @@ class MiscGameplayFunctions
 			MiscGameplayFunctions.TransferItemVariables(source_ib, target_ib, exclude_quantity);
 		}
 
-		if( !GetGame().IsClient())
+		if (GetGame().IsServer() || !GetGame().IsMultiplayer())
 		{
-			//if( transfer_health ) target_ib.SetHealth("", "", source.GetHealth("",""));
-			target_ib.SetHealth("", "", source.GetHealth01("","") * target_ib.GetMaxHealth("",""));
+			if( transfer_health )
+				target_ib.SetHealth01("", "", source.GetHealth01("",""));
 		}
 	}
 
@@ -943,6 +944,8 @@ class MiscGameplayFunctions
 	
 	static void DropAllItemsInInventoryInBounds(ItemBase ib, vector halfExtents)
 	{
+		if (!GetGame().IsServer())
+			return;
 		array<EntityAI> items = new array<EntityAI>;
 		ib.GetInventory().EnumerateInventory(InventoryTraversalType.LEVELORDER, items);
 		
@@ -1022,7 +1025,7 @@ class MiscGameplayFunctions
 						MiscGameplayFunctions.TransferItemProperties(entityIB, new_item);
 						entityIB.AddQuantity( -1 );
 						new_item.SetQuantity( 1 );
-						new_item.ThrowPhysically(null, force);
+						new_item.ThrowPhysically(null, force, false);
 					}
 				}
 			}
@@ -1038,7 +1041,7 @@ class MiscGameplayFunctions
 						spltDst.SetGroundEx(entity, position, direction);
 						
 						ItemBase splitItem = entityIB.SplitIntoStackMaxToInventoryLocationEx( spltDst );
-						splitItem.ThrowPhysically(null, force);
+						splitItem.ThrowPhysically(null, force, false);
 					}
 				}
 				
@@ -1046,7 +1049,7 @@ class MiscGameplayFunctions
 				entity.GetInventory().GetCurrentInventoryLocation(src);
 				
 				entity.GetInventory().TakeToDst(invMode, src, dst);
-				entityIB.ThrowPhysically(null, force);
+				entityIB.ThrowPhysically(null, force, false);
 			}
 		}
 		else
@@ -1303,13 +1306,8 @@ class MiscGameplayFunctions
 			return true;
 
 		cache.ObjectCenterPos = object.GetCenter();
-			
-		if (IsObjectObstructedProxy(object, cache, player))
-			return true;
-			
-		DayZPhysics.RaycastRV(cache.RaycastStart, cache.ObjectCenterPos, cache.ObjectContactPos, cache.ObjectContactDir, cache.ContactComponent, cache.HitObjects, object, GetGame().GetPlayer(), false, false, ObjIntersectFire, 0.0, CollisionFlags.ALLOBJECTS);
-			
-		return IsObjectObstructedFilter(object, cache, player);
+		
+		return IsObjectObstructedFilterEx(object, cache, player);
 	}
  	
 	static bool IsObjectObstructedProxy(Object object, IsObjectObstructedCache cache, PlayerBase player)
@@ -1363,6 +1361,51 @@ class MiscGameplayFunctions
 			//		}
 			//	}
 			//}
+		}
+		
+		return false;
+	}
+	
+	//! groups 'RaycastRVProxy' and 'RaycastRV' approaches into one method, allowes for comprehensive geometry override, if desired
+	static bool IsObjectObstructedFilterEx(Object object, IsObjectObstructedCache cache, PlayerBase player, int geometryTypeOverride = -1)
+	{
+		//first proxy geometries
+		RaycastRVParams rayInput = new RaycastRVParams(cache.RaycastStart, cache.ObjectCenterPos, player);
+		rayInput.flags = CollisionFlags.ALLOBJECTS;
+		if (geometryTypeOverride != -1)
+			rayInput.type = geometryTypeOverride; //default 'ObjIntersectView'
+		DayZPhysics.RaycastRVProxy(rayInput, cache.HitProxyObjects);
+		int count;
+		int i;
+		
+		if (cache.HitProxyObjects)
+		{
+			count = cache.HitProxyObjects.Count();
+			Object parent;
+			for (i = 0; i < count; i++)
+			{
+				if (cache.HitProxyObjects[i].hierLevel > 0) //parent has to exist, skipping nullcheck
+				{
+					parent = cache.HitProxyObjects[i].parent;
+					if (parent && !parent.IsMan() && parent.CanProxyObstruct())
+					{
+						if (parent != object || (parent == object && object.CanProxyObstructSelf()))
+							return true;
+					}	
+				}
+			}
+		}
+		
+		//second, regular raycast
+		int geometry = ObjIntersectFire; //default for the RV raycast
+		if (geometryTypeOverride != -1)
+			geometry = geometryTypeOverride;
+		DayZPhysics.RaycastRV(cache.RaycastStart, cache.ObjectCenterPos, cache.ObjectContactPos, cache.ObjectContactDir, cache.ContactComponent, cache.HitObjects, object, GetGame().GetPlayer(), false, false, geometry, 0.0, CollisionFlags.ALLOBJECTS);
+		count = cache.HitObjects.Count();
+		for (i = 0; i < count; i++ )
+		{
+			if (cache.HitObjects[i].CanObstruct())
+				return true;
 		}
 		
 		return false;
@@ -1589,7 +1632,51 @@ class MiscGameplayFunctions
 
 		return INDEX_NOT_FOUND;
 	}
-};
+	
+	static void RemoveAllAttachedChildrenByTypename(notnull EntityAI parent, array<typename> listOfTypenames)
+	{
+		if (listOfTypenames.Count() > 0)
+		{
+			Object child = Object.Cast(parent.GetChildren());
+			while (child)
+			{
+				Object childToRemove = child;
+				child = Object.Cast(child.GetSibling());
+	
+				if (childToRemove.IsAnyInherited(listOfTypenames))
+				{
+					vector pos = childToRemove.GetPosition();			
+					parent.RemoveChild(childToRemove, false);
+	
+					vector m4[4];
+					Math3D.MatrixIdentity4(m4);
+					m4[3] = pos;
+					childToRemove.SetTransform(m4);
+					childToRemove.PlaceOnSurface();
+				}
+			}
+		}
+	}
+	//! Fills the provided array with all children entities in hierarchy of this entity
+	static void GetAttachedChildren(IEntity parent, array<IEntity> outputObjects)
+	{
+		IEntity child = parent.GetChildren();
+		while (child)
+		{
+			outputObjects.Insert(child);
+			child = child.GetSibling();
+		}
+	}
+	
+	static void SoakItemInsideParentContainingLiquidAboveThreshold(notnull ItemBase item, notnull ItemBase parent, float liquidQuantityThresholdPercentage = 0.05)
+	{
+		if (g_Game.IsServer())
+		{
+			if (parent.GetLiquidType() != 0 && parent.GetQuantityNormalized() > liquidQuantityThresholdPercentage)
+				item.SetWetMax();
+		}
+	}	
+}
 
 class DestroyItemInCorpsesHandsAndCreateNewOnGndLambda : ReplaceAndDestroyLambda
 {
@@ -1638,7 +1725,6 @@ class IsObjectObstructedCache // Pretending this is a struct
 	// Only inside data
 	void ClearCache()
 	{		
-		// TODO: What is fastest to assign to vector, "0 0 0" or Vector(0, 0, 0) ?
 		ObjectCenterPos = "0 0 0";
 		ObjectContactPos = "0 0 0";
 		ObjectContactDir = "0 0 0";
@@ -1646,10 +1732,4 @@ class IsObjectObstructedCache // Pretending this is a struct
 		HitProxyObjects.Clear();
 		HitObjects.Clear();
 	}
-	
-	// Clear everything
-	/*void Clear()
-	{
-		
-	}*/
 }

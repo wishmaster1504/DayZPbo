@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{685425B0F0E9E624}Graphics/Particles/materials/fire/Fireworks_Years_anim.emat"
+ Author "3643"
+ ChangeDate -1921192148
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass LINUX : PC {
+  }
+ }
+}

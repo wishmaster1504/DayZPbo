@@ -131,7 +131,7 @@ class DestructionEffectGasCanister : DestructionEffectBase
 		m_ParticlePersistent = ParticleList.NONE;
 		m_ParticleOneTime = ParticleList.RGD5;
 		
-		m_SoundSetOneTime = "Flare_Gun_Shot_SoundSet";
+		m_SoundSetOneTime = "";
 		m_SoundSetPersistent= "";
 		
 		m_ReplaceWithEntity = "";
@@ -181,6 +181,49 @@ class DestructionEffectMetalicMechanism : DestructionEffectBase
 		m_ReplaceWithEntity = "";
 		m_KeepHealthOnReplace = true;
 		m_ReplaceDelay = 1000;
+		
+		m_HasExplosionDamage = false;
+		m_AmmoType = "";
+		m_DamageType = DamageType.EXPLOSION;
+	}
+	
+	
+	override void OnEntityDestroyedOneTimeClient(EntityAI entity, int oldLevel, string zone)
+	{
+	}
+	
+	override void OnEntityDestroyedOneTimeServer(EntityAI entity, int oldLevel, string zone)
+	{
+	}
+	
+	override void OnEntityDestroyedPersistentClient(EntityAI entity, string zone)
+	{
+	}
+	
+	override void OnEntityDestroyedPersistentServer(EntityAI entity, string zone)
+	{
+	}
+	
+	override void OnExplosionEffects(Object source, Object directHit, int componentIndex, string surface, vector pos, vector surfNormal, float energyFactor, float explosionFactor, bool isWater, string ammoType)
+	{
+	}
+}
+
+class DestructionEffectSpookyGoat : DestructionEffectBase
+{
+	override void Init()
+	{
+		m_EntityIsTakeable = false;
+		
+		m_ParticlePersistent = ParticleList.NONE;
+		m_ParticleOneTime = ParticleList.EXPLOSION_GOAT;
+		
+		m_SoundSetOneTime = "";
+		m_SoundSetPersistent= "";
+		
+		m_ReplaceWithEntity = "";
+		m_KeepHealthOnReplace = false;
+		m_ReplaceDelay = 0;
 		
 		m_HasExplosionDamage = false;
 		m_AmmoType = "";

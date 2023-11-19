@@ -12,6 +12,7 @@ class IngameHud extends Hud
 	protected float								m_BlinkTime;
 	
 	protected ref map<int,string>				m_BadgesWidgetNames;
+	protected ref map<int,int>					m_BadgesSupportedLevels;
 	protected ref map<int,int>					m_BadgesWidgetDisplay;
 	protected ref map<int,ImageWidget>			m_BadgesWidgets;  // [key] ImageWidget
 	protected bool								m_AnyBadgeVisible;
@@ -170,6 +171,7 @@ class IngameHud extends Hud
 		
 		m_BadgesWidgets					= new map<int, ImageWidget>; // [key] widgetName
 		m_BadgesWidgetNames				= new map<int, string>;
+		m_BadgesSupportedLevels			= new map<int, int>;
 		m_BadgesWidgetDisplay			= new map<int, int>;
 		
 		m_VehicleDamageZonesHitTimer	= 0;
@@ -356,6 +358,8 @@ class IngameHud extends Hud
 		m_BadgesWidgetNames.Clear();
 		m_BadgesWidgets.Clear();
 		m_BadgesWidgetDisplay.Clear();
+		m_BadgesSupportedLevels.Clear();
+		
 		m_BadgesWidgetNames.Set( NTFKEY_FRACTURE, "Fracture" );
 		m_BadgesWidgetNames.Set( NTFKEY_STUFFED, "Stomach" );
 		m_BadgesWidgetNames.Set( NTFKEY_SICK, "Sick" );
@@ -364,13 +368,30 @@ class IngameHud extends Hud
 		m_BadgesWidgetNames.Set( NTFKEY_BLEEDISH, "Bleeding" );
 		m_BadgesWidgetNames.Set( NTFKEY_LIVES, "Shock" );
 		m_BadgesWidgetNames.Set( NTFKEY_PILLS, "Pills" );
+		m_BadgesWidgetNames.Set( NTFKEY_LEGS, "InjuredLegs" );
+		
+		// any badges not included bellow are just ON/OFF
+		m_BadgesSupportedLevels.Insert(NTFKEY_LEGS,3);
 	
 		for ( i = 0; i < m_BadgesWidgetNames.Count(); i++ )
 		{
 			string badge_name = m_BadgesWidgetNames.GetElement(  i);
 			key = m_BadgesWidgetNames.GetKey( i );
 			ImageWidget badge_widget;
+
+
 			Class.CastTo(badge_widget,  m_Badges.FindAnyWidget( badge_name ) );
+			
+			if (m_BadgesSupportedLevels.Contains(key))
+			{
+				int badgeCountMax = m_BadgesSupportedLevels.Get(key);
+				
+				for ( int q = 0; q < badgeCountMax; q++ )
+				{
+					badge_widget.LoadImageFile( q, "set:dayz_gui image:icon" + badge_name + q );
+				}
+			}
+
 			m_BadgesWidgets.Set( key, badge_widget );
 			badge_widget.Show( false );
 			m_BadgesWidgetDisplay.Set( key, false );
@@ -614,13 +635,23 @@ class IngameHud extends Hud
 		for ( int i = 0; i < m_BadgesWidgetDisplay.Count(); i++ )
 		{
 			int badge_key = m_BadgesWidgetDisplay.GetKey( i );
+			int badge_value = m_BadgesWidgetDisplay.Get( badge_key );
 			string badge_name = m_BadgesWidgetNames.Get( badge_key );
+			
 			ImageWidget badge_widget
 			Class.CastTo(badge_widget,  m_Badges.FindAnyWidget( badge_name ) );
 			if ( badge_widget )
 			{
-				if ( m_BadgesWidgetDisplay.Get( badge_key ) > 0 )
+				if ( badge_value > 0 )
 				{
+					if (m_BadgesSupportedLevels.Contains(badge_key))
+					{
+						int levelIndex = badge_value - 1;
+						int maxSupportedIndex = m_BadgesSupportedLevels.Get(badge_key) - 1;
+						if (maxSupportedIndex >= levelIndex)
+							badge_widget.SetImage(levelIndex);
+					}
+
 					badge_widget.Show( true );
 					m_AnyBadgeVisible = true;
 					if( badge_key == NTFKEY_BLEEDISH )
@@ -1052,6 +1083,15 @@ class IngameHud extends Hud
 	bool IsHudVisible()
 	{
 		return m_IsHudVisible;
+	}
+	
+	override void UpdateQuickbarGlobalVisibility()
+	{
+		#ifdef PLATFORM_CONSOLE
+			ShowQuickBar(GetGame().GetInput().IsEnabledMouseAndKeyboardEvenOnServer());
+		#else
+			ShowQuickBar(g_Game.GetProfileOption(EDayZProfilesOptions.QUICKBAR));
+		#endif
 	}
 	
 	void RefreshQuickbarVisibility()
@@ -1487,6 +1527,17 @@ class IngameHud extends Hud
 			{
 				m_HitDirEffectArray.Remove(i);
 			}
+		}
+	}
+	
+	void Debug()
+	{
+		foreach (int val:m_BadgesWidgetDisplay)
+		{
+			int key = m_BadgesWidgetDisplay.GetKeyByValue(val);
+			Print(EnumTools.EnumToString(eDisplayElements, key));
+			Print(val);
+			Print("---------------------");
 		}
 	}
 	

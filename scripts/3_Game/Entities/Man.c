@@ -30,20 +30,35 @@ class Man extends EntityAI
 		SetFlags(EntityFlags.TOUCHTRIGGERS, false);
 	}
 
-	override bool IsMan() { return true; }
-	override bool IsHealthVisible() { return false; }
+	override bool IsMan()
+	{
+		return true;
+	}
+
+	override bool IsHealthVisible()
+	{
+		return false;
+	}
+
+	override bool HasFixedActionTargetCursorPosition()
+	{
+		return true;
+	}
+
 	bool IsUnconscious();
 
-	int GetPlayerState ()
+	int GetPlayerState()
 	{
-		if( IsAlive() ) return EPlayerStates.ALIVE;
-		else return EPlayerStates.DEAD;
+		if (IsAlive())
+			return EPlayerStates.ALIVE;
+		
+		return EPlayerStates.DEAD;
 	}
 	
-	void AddItemToDelete( EntityAI item ){}
+	void AddItemToDelete(EntityAI item);
 
 	///@{ inventory
-	HumanInventory GetHumanInventory ()
+	HumanInventory GetHumanInventory()
 	{
 		HumanInventory i = HumanInventory.Cast(GetInventory());
 		return i;
@@ -828,17 +843,7 @@ class Man extends EntityAI
 		return true;
 	}
 	
-	void UpdateInventoryMenu()
-	{
-		if( GetGame().IsClient() )
-		{
-			UIScriptedMenu menu = GetGame().GetUIManager().FindMenu(MENU_INVENTORY);
-			if( menu )
-			{
-				//menu.Refresh();
-			}
-		}
-	}
+	void UpdateInventoryMenu();
 	
 	///@{ Stats
 	//! Registers new stat type for this player.
@@ -897,14 +902,22 @@ class Man extends EntityAI
 	proto native void StatSyncToClient();
 	///@} Stats
 	
-	bool IsInventorySoftLocked() { return false; }
+	bool IsInventorySoftLocked()
+	{
+		return false;
+	}
+
 	void SetInventorySoftLock(bool status);
 	
 	/// returns true if man is in transport, false otherwise
-	bool IsInTransport () { return null != Transport.Cast(GetParent()); }
+	bool IsInTransport()
+	{
+		return Transport.Cast(GetParent()) != null;
+	}
 	
-	void StopDeathDarkeningEffect() {}
-	bool PhysicalPredictiveDropItem(EntityAI entity, bool heavy_item_only = true) {}
+	void StopDeathDarkeningEffect();
+	bool PhysicalPredictiveDropItem(EntityAI entity, bool heavy_item_only = true);
 	void SetProcessUIWarning(bool state);
-	void OnGameplayDataHandlerSync(){};//depricated, sync now happens before the player is created, calling of this event still happens for legacy reasons
+	void OnGameplayDataHandlerSync(); //depricated, sync now happens before the player is created, calling of this event still happens for legacy reasons
+	bool CanPlaceItem(EntityAI item);
 };

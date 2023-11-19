@@ -47,6 +47,7 @@ class ComponentEnergyManager : Component
 	
 	protected 		float			m_EnergyUsage;
 	protected 		float			m_Energy;
+	protected 		float			m_EnergyAtSpawn;
 	protected 		float			m_EnergyStorageMax;
 	protected 		float			m_ReduceMaxEnergyByDamageCoef;
 	protected 		float			m_SocketsCount;
@@ -183,7 +184,8 @@ class ComponentEnergyManager : Component
 		m_HasElectricityIcon			= GetGame().ConfigGetFloat(cfg_energy_manager + "hasIcon");
 		m_AutoSwitchOffWhenInCargo 		= GetGame().ConfigGetFloat(cfg_energy_manager + "autoSwitchOffWhenInCargo");
 		
-		m_Energy						= GetGame().ConfigGetFloat(cfg_energy_manager + "energyAtSpawn");
+		m_EnergyAtSpawn					= GetGame().ConfigGetFloat(cfg_energy_manager + "energyAtSpawn");
+		m_Energy = m_EnergyAtSpawn;
 		m_EnergyStorageMax				= GetGame().ConfigGetFloat(cfg_energy_manager + "energyStorageMax");
 		m_ReduceMaxEnergyByDamageCoef	= GetGame().ConfigGetFloat(cfg_energy_manager + "reduceMaxEnergyByDamageCoef");
 		m_SocketsCount					= GetGame().ConfigGetFloat(cfg_energy_manager + "powerSocketsCount");
@@ -450,40 +452,40 @@ class ComponentEnergyManager : Component
 	{
 		if ( GetGame() )
 		{
-			int index_start	= GetPluggedDevicesCount() - 1;
-			bool device_found = false;
+			int indexStart	= GetPluggedDevicesCount() - 1;
+			bool deviceFound = false;
 			
-			for ( int i = index_start; i >= 0; --i )
+			for (int i = indexStart; i >= 0; --i)
 			{
 				EntityAI plugged_device = GetPluggedDevices().Get(i);
 				
 				if (plugged_device == device_to_unplug)
 				{
 					GetPluggedDevices().Remove(i);
-					device_found = true;
+					deviceFound = true;
 					break;
 				}
 			}
 			
-			if (device_found)
+			if (deviceFound)
 			{
 				int socket_ID = device_to_unplug.GetCompEM().GetMySocketID();
-				UnplugCordFromSocket( socket_ID );
-				device_to_unplug.GetCompEM().SetEnergySource(NULL);
+				UnplugCordFromSocket(socket_ID);
+				device_to_unplug.GetCompEM().SetEnergySource(null);
 				device_to_unplug.GetCompEM().DeviceUpdate();
 				device_to_unplug.GetCompEM().StartUpdates();
-				device_to_unplug.GetCompEM().WakeUpWholeBranch( m_ThisEntityAI );
+				device_to_unplug.GetCompEM().WakeUpWholeBranch(m_ThisEntityAI);
 				
-				if (m_DebugPlugs  &&  m_DebugPlugArrow)
+				if (m_DebugPlugs && m_DebugPlugArrow)
 				{
 					m_DebugPlugArrow.Destroy();
-					m_DebugPlugArrow = NULL;
+					m_DebugPlugArrow = null;
 				}
 				
 				OnOwnSocketReleased(device_to_unplug);
-				device_to_unplug.GetCompEM().OnIsUnplugged( m_ThisEntityAI );
-				device_to_unplug.ShowSelection ( SEL_CORD_FOLDED );
-				device_to_unplug.HideSelection ( SEL_CORD_PLUGGED );
+				device_to_unplug.GetCompEM().OnIsUnplugged(m_ThisEntityAI);
+				device_to_unplug.ShowSelection(SEL_CORD_FOLDED);
+				device_to_unplug.HideSelection(SEL_CORD_PLUGGED);
 			}
 		}
 	}
@@ -491,9 +493,9 @@ class ComponentEnergyManager : Component
 	//! Energy manager: Unplugs this device from its power source
 	void UnplugThis()
 	{
-		if ( GetGame() )
+		if (GetGame())
 		{
-			if ( GetEnergySource() )
+			if (GetEnergySource())
 			{
 				GetEnergySource().GetCompEM().UnplugDevice(m_ThisEntityAI);
 			}
@@ -505,10 +507,10 @@ class ComponentEnergyManager : Component
 	{
 		if ( GetPluggedDevices() ) // This check is necesarry in case this function is called before initialization
 		{
-			int index_start	= GetPluggedDevicesCount() - 1;
-			for ( int i = index_start; i >= 0; --i )
+			int indexStart	= GetPluggedDevicesCount() - 1;
+			for (int i = indexStart; i >= 0; --i)
 			{
-				UnplugDevice( GetPluggedDevices().Get(i) );
+				UnplugDevice(GetPluggedDevices().Get(i));
 			}
 		}
 	}
@@ -538,10 +540,7 @@ class ComponentEnergyManager : Component
 	//! Energy manager: Sets stored energy for this device between 0 and MAX based on relative input value between 0 and 1
 	void SetEnergy0To1(float energy01)
 	{
-		if (GetGame().IsServer() || !GetGame().IsMultiplayer()) // Client can't change energy value.
-		{
-			SetEnergy( Math.Lerp(0, GetEnergyMax(),energy01));
-		}
+		SetEnergy( Math.Lerp(0, GetEnergyMax(),energy01));
 	}
 
 	//! Energy manager: Shows/Hides all selections this system works with. Call this if something is wrong with selections (like during Init and Restore event in config)
@@ -587,33 +586,27 @@ class ComponentEnergyManager : Component
 	//! Energy manager: Unplugs this device when it's necesarry
 	void UpdatePlugState()
 	{
-		// Check if the item is held in hands during advanced placement
-		if ( m_ThisEntityAI.GetHierarchyRootPlayer()  &&  m_ThisEntityAI.GetHierarchyRootPlayer().IsKindOf("SurvivorBase") )
+		if (m_ThisEntityAI.GetCompEM().GetEnergySource())
 		{
-			// Yes it is in player's hands
 			EntityAI player = m_ThisEntityAI.GetHierarchyRootPlayer();
-			
-			// Measure distance from the player
-			vector pos_player = player.GetPosition();
-			if ( ! IsEnergySourceAtReach( pos_player , 5 )  )
+			// Check if the item is held in hands during advanced placement
+			if (player)
 			{
-				UnplugThis();
+				// Measure distance from the player
+				vector playerPosition = player.GetPosition();
+				if (!IsEnergySourceAtReach(playerPosition, 5))
+					UnplugThis();
 			}
-		}
-		else
-		{
-			// No it is not in player's hands.
-			// Measure distance from the device
-			vector pos_item = m_ThisEntityAI.GetPosition();
-			
-			if ( m_ThisEntityAI.GetHierarchyParent() )
+			else
 			{
-				pos_item = m_ThisEntityAI.GetHierarchyParent().GetPosition();
-			}
-			
-			if ( ! IsEnergySourceAtReach( pos_item )  )
-			{
-				UnplugThis();
+				// Measure distance from the device
+				vector itemPosition = m_ThisEntityAI.GetPosition();
+				
+				if (m_ThisEntityAI.GetHierarchyParent())
+					itemPosition = m_ThisEntityAI.GetHierarchyParent().GetPosition();
+				
+				if (!IsEnergySourceAtReach(itemPosition))
+					UnplugThis();
 			}
 		}
 	}
@@ -1066,7 +1059,7 @@ class ComponentEnergyManager : Component
 			distance = vector.Distance( from_position, source_pos );
 		}
 		
-		if ( distance > GetCordLength() + add_tolerance )
+		if (distance > GetCordLength() + add_tolerance)
 		{
 			return false;
 		}
@@ -1284,6 +1277,11 @@ class ComponentEnergyManager : Component
 		return m_EnergyStorageMax;
 	}
 	
+	float GetEnergyAtSpawn()
+	{
+		return m_EnergyAtSpawn;
+	}
+	
 	//! Energy manager: Returns the length of the virtual power cord.
 	float GetCordLength()
 	{
@@ -1377,7 +1375,6 @@ class ComponentEnergyManager : Component
 		}
 		
 		UpdateCanWork();
-		
 		m_ThisEntityAI.OnIsPlugged(source_device);
 	}
 
@@ -1385,7 +1382,6 @@ class ComponentEnergyManager : Component
 	void OnIsUnplugged( EntityAI last_energy_source ) 
 	{
 		UpdateCanWork();
-		
 		m_ThisEntityAI.OnIsUnplugged( last_energy_source );
 	}
 
@@ -1455,14 +1451,14 @@ class ComponentEnergyManager : Component
 	// Starts the device's main cycle
 	void StartUpdates()
 	{
-		if ( !m_IsPassiveDevice )
+		if (!m_IsPassiveDevice)
 		{
 			if (!m_UpdateTimer)
-				m_UpdateTimer = new Timer( CALL_CATEGORY_SYSTEM );
+				m_UpdateTimer = new Timer(CALL_CATEGORY_SYSTEM);
 			
-			if ( !m_UpdateTimer.IsRunning() ) // Makes sure the timer is NOT running already
+			if (!m_UpdateTimer.IsRunning()) // Makes sure the timer is NOT running already
 			{
-				m_UpdateTimer.Run( GetUpdateInterval() , this, "DeviceUpdate", NULL, true);
+				m_UpdateTimer.Run(GetUpdateInterval(), this, "DeviceUpdate", null, true);
 			}
 		}
 	}
@@ -1500,6 +1496,33 @@ class ComponentEnergyManager : Component
 		}
 	}
 
+	//! Gets called originally when the player is interacting with an item containing this energy component, then recursively following the branches of connection from the original item to the peripheries
+	//! External calling of this function is not automatic for all item interactions and may need to be implemented on case by case bases
+	//! Avoid using for gameplay logic, use 'OnInteractBranch' instead
+	void InteractBranch(EntityAI originalCaller, Man player = null, int system = 0)
+	{
+		OnInteractBranch(originalCaller, player, system);
+		if ( GetSocketsCount() > 0 )
+		{
+			array<EntityAI> devices = GetPluggedDevices();
+			
+			foreach ( EntityAI device : devices)
+			{
+				if ( device != originalCaller ) // originalCaller check here prevents infinite loops
+				{
+					device.GetCompEM().InteractBranch( originalCaller, player, system );
+				}
+			}
+		}
+	}
+	
+	//! Called when the player is interacting with an item containing this energy component, or when interacting with an item this device is connected to
+	protected void OnInteractBranch(EntityAI originalCaller, Man player, int system)
+	{
+		m_ThisEntityAI.IncreaseLifetime();
+	
+	}
+		
 	// 'Wakes up' all devices down the network so they start working, if they have enough power, and are switched ON
 	protected void WakeUpWholeBranch( EntityAI original_caller )
 	{
@@ -1587,13 +1610,7 @@ class ComponentEnergyManager : Component
 		}
 		
 		if (m_EnergySource)
-		{
-			m_EnergySource.GetNetworkID( m_EnergySourceNetworkIDLow, m_EnergySourceNetworkIDHigh );
-			
-			//Print(m_EnergySource);
-			//Print(m_EnergySourceNetworkIDLow);
-			//Print(m_EnergySourceNetworkIDHigh);
-		}
+			m_EnergySource.GetNetworkID(m_EnergySourceNetworkIDLow, m_EnergySourceNetworkIDHigh);
 		
 		Synch();
 	}
@@ -1601,24 +1618,26 @@ class ComponentEnergyManager : Component
 	// Plugs the given device into this one
 	protected bool PlugInDevice(EntityAI device_to_plug, int socket_id = -1)
 	{
-		if ( CanReceivePlugFrom(device_to_plug) )
+		if (CanReceivePlugFrom(device_to_plug))
 		{
-			if ( device_to_plug.GetCompEM().IsPlugged() )
+			device_to_plug.IncreaseLifetime();
+			InteractBranch(m_ThisEntityAI);
+			if (device_to_plug.GetCompEM().IsPlugged())
 				device_to_plug.GetCompEM().UnplugThis();
 			
-			GetPluggedDevices().Insert( device_to_plug );
+			GetPluggedDevices().Insert(device_to_plug);
 			device_to_plug.GetCompEM().SetEnergySource(m_ThisEntityAI);
 			
-			PlugCordIntoSocket( device_to_plug, socket_id ); // Visualisation
-			OnOwnSocketTaken( device_to_plug );
+			PlugCordIntoSocket(device_to_plug, socket_id); // Visualisation
+			OnOwnSocketTaken(device_to_plug);
 			
 			device_to_plug.GetCompEM().OnIsPlugged(m_ThisEntityAI);
 			WakeUpWholeBranch( m_ThisEntityAI );
 			
 			if (GetGame().IsServer() || !GetGame().IsMultiplayer())
 			{
-				device_to_plug.HideSelection( SEL_CORD_FOLDED );
-				device_to_plug.ShowSelection( SEL_CORD_PLUGGED );
+				device_to_plug.HideSelection(SEL_CORD_FOLDED);
+				device_to_plug.ShowSelection(SEL_CORD_PLUGGED);
 			}
 			
 			return true;
@@ -1727,9 +1746,11 @@ class ComponentEnergyManager : Component
 	// Updates the device's state of power. This function is visualized in the diagram at DayZ Confluence >> Camping & Squatting >> Electricity >> Energy Manager functionalities
 	void DeviceUpdate()
 	{
-		//vector pos = m_ThisEntityAI.GetPosition();
-		//string debug_message = "Object " + m_ThisEntityAI.GetType() + "  |  Energy: " + GetEnergy() + "  |  IsAtReach: " + (IsEnergySourceAtReach(pos)).ToString();
-		//Print(debug_message);
+		/*
+		vector pos = m_ThisEntityAI.GetPosition();
+		string debug_message = "Object " + m_ThisEntityAI.GetType() + "  |  Energy: " + GetEnergy() + "  |  IsAtReach: " + (IsEnergySourceAtReach(pos)).ToString();
+		Print(debug_message);
+		*/
 		
 		if ( !m_IsPassiveDevice )
 		{
@@ -1801,7 +1822,7 @@ class ComponentEnergyManager : Component
 					ClearLastUpdateTime();
 				}
 			}
-			else if (this  &&  m_ThisEntityAI)
+			else if (this && m_ThisEntityAI)
 			{
 				SetPowered( false );
 				StopUpdates();

@@ -59,6 +59,10 @@ class WeaponStableState extends WeaponStateBase
 					m_weapon.SetWeaponAnimState(m_animState);
 					fsmDebugSpam("[wpnfsm] " + Object.GetDebugName(m_weapon) + " state=" + m_weapon.GetCurrentState().Type() + " synchronized remote anim state: " + typename.EnumToString(PistolAnimState, curr) + " --> " + typename.EnumToString(PistolAnimState, m_animState));
 				}
+			}
+			else
+			{
+				m_weapon.SetGroundAnimFrameIndex(m_animState);
 			}		
 		}
 	}
@@ -69,6 +73,7 @@ class WeaponStableState extends WeaponStateBase
 		m_weapon.SetJammed(false);
 		if (e)
 			SyncAnimState();
+		m_weapon.ResetWeaponAnimState();
 	}
 	override void OnUpdate(float dt)
 	{
@@ -119,6 +124,12 @@ class WeaponStableState extends WeaponStateBase
 	
 	//! Whether the gun is jammed
 	bool IsJammed() { return false; }
+	
+	//! Whether the gun is discharged
+	bool IsDischarged() { return false; }
+	
+	//! Whether the gun is open
+	bool IsWeaponOpen() { return false; }
 	
 	//! Override with the filling of m_muzzleHasBullet
 	void InitMuzzleArray() { m_muzzleHasBullet = { MuzzleState.U }; }

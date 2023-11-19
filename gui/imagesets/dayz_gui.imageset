@@ -480,6 +480,12 @@ ImageSetClass {
    Size 64 64
    Flags 0
   }
+  ImageSetDefClass loading_screen_bulb {
+   Name "loading_screen_bulb"
+   Pos 781 504
+   Size 64 64
+   Flags 0
+  }
   ImageSetDefClass continuous_action_mouse_half {
    Name "continuous_action_mouse_half"
    Pos 852 438
@@ -846,6 +852,30 @@ ImageSetClass {
    Size 64 64
    Flags 0
   }
+  ImageSetDefClass dlc_banner {
+   Name "dlc_banner"
+   Pos 852 504
+   Size 64 64
+   Flags 0
+  }
+  ImageSetDefClass Notification_console_triangle {
+   Name "Notification_console_triangle"
+   Pos 941 536
+   Size 32 32
+   Flags 0
+  }
+  ImageSetDefClass PasswordEyeOpen {
+   Name "PasswordEyeOpen"
+   Pos 852 570
+   Size 64 64
+   Flags 0
+  }
+  ImageSetDefClass PasswordEyeClose {
+   Name "PasswordEyeClose"
+   Pos 852 636
+   Size 64 64
+   Flags 0
+  }
  }
  Groups {
   ImageSetGroupClass UI {
@@ -1036,6 +1066,30 @@ ImageSetClass {
      Pos 708 161
      Size 38 38
      Flags 3
+    }
+    ImageSetDefClass iconLeg {
+     Name "iconLeg"
+     Pos 708 200
+     Size 38 38
+     Flags 3
+    }
+    ImageSetDefClass iconInjuredLegs0 {
+     Name "iconInjuredLegs0"
+     Pos 493 203
+     Size 32 32
+     Flags 0
+    }
+    ImageSetDefClass iconInjuredLegs1 {
+     Name "iconInjuredLegs1"
+     Pos 493 170
+     Size 32 32
+     Flags 0
+    }
+    ImageSetDefClass iconInjuredLegs2 {
+     Name "iconInjuredLegs2"
+     Pos 493 137
+     Size 32 32
+     Flags 0
     }
     ImageSetDefClass stance_walk {
      Name "stance_walk"

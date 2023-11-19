@@ -13,6 +13,7 @@ PanelWidgetClass rootFrame {
   VideoWidgetClass video {
    visible 1
    ignorepointer 1
+   ignoregloballv 1
    size 1.6 0.9
    halign center_ref
    valign center_ref
@@ -23,13 +24,13 @@ PanelWidgetClass rootFrame {
    fixaspect inside
    priority 10
    "src alpha" 0
-   "no wrap" 1
-   stretch 1
+   "clamp mode" clamp
+   "stretch mode" stretch_w_h
    font "gui/fonts/sdf_MetronLight42"
    "text color" 1 1 1 1
    "outline size" 1
    "outline color" 0 0 0 1
-   "text offset" 0 -100
+   "text offset" 0 0
    "text background" 0
    "background color" 0 0 0 0.68
   }
@@ -77,7 +78,7 @@ PanelWidgetClass rootFrame {
        hexactsize 0
        vexactsize 1
        text "#layout_console_inventory_toolbar_context"
-       font "gui/fonts/sdf_MetronLight24"
+       font "gui/fonts/sdf_MetronLight42"
        "italic text" 0
        "exact text" 1
        "exact text size" 22

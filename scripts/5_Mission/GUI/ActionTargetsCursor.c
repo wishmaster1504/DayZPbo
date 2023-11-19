@@ -50,8 +50,13 @@ class ATCCachedObject
 	}
 };
 
-class ActionTargetsCursor extends ScriptedWidgetEventHandler
+class ActionTargetsCursor : ScriptedWidgetEventHandler
 {
+	private const ref array<typename> VISION_OBSTRUCTION_PPEFFECTS_TYPES = {
+		PPERequester_BurlapSackEffects,
+		PPERequester_FlashbangEffects
+	};
+
 	protected PlayerBase 					m_Player;
 	protected ActionTarget 					m_Target;
 	protected ref ATCCachedObject			m_CachedObject;
@@ -122,11 +127,11 @@ class ActionTargetsCursor extends ScriptedWidgetEventHandler
 	}
 
 	//! DEPRECATED
-	void SetInteractXboxIcon(string imageset_name, string image_name) {};
-	void SetContinuousInteractXboxIcon(string imageset_name, string image_name) {};
-	void SetSingleXboxIcon(string imageset_name, string image_name) {};
-	void SetContinuousXboxIcon(string imageset_name, string image_name) {};
-	protected void SetXboxIcon(string name, string imageset_name, string image_name) {};
+	void SetInteractXboxIcon(string imageset_name, string image_name);
+	void SetContinuousInteractXboxIcon(string imageset_name, string image_name);
+	void SetSingleXboxIcon(string imageset_name, string image_name);
+	void SetContinuousXboxIcon(string imageset_name, string image_name);
+	protected void SetXboxIcon(string name, string imageset_name, string image_name);
 	//! ---------
 	
 	protected void SetControllerIcon(string pWidgetName, string pInputName)
@@ -300,15 +305,29 @@ class ActionTargetsCursor extends ScriptedWidgetEventHandler
 			m_Player = null;
 			m_AM = null;
 		}
-		
 
-		if (!m_Player) GetPlayer();
-		if (!m_AM) GetActionManager();
-		if (m_Player.IsInVehicle()) m_Hidden = true;
+		if (!m_Player)
+			GetPlayer();
+
+		if (!m_AM)
+			GetActionManager();
+		
+		if (m_Player.IsInVehicle() || m_AM.GetRunningAction())
+			m_Hidden = true;
 		
 		
+		/*
+		#ifdef DIAG_DEVELOPER
+		if (DeveloperFreeCamera.IsFreeCameraEnabled())
+			HideWidget();
+			return;
+		#endif
+		*/
+
+		bool isVisionObstructionActive = PPEManagerStatic.GetPPEManager().IsAnyRequesterRunning(VISION_OBSTRUCTION_PPEFFECTS_TYPES);
+				
 		//! don't show floating widget if it's disabled in profile or the player is unconscious
-		if (GetGame().GetUIManager().GetMenu() || !g_Game.GetProfileOption(EDayZProfilesOptions.HUD) || m_Hud.IsHideHudPlayer() || m_Player.IsUnconscious())
+		if (GetGame().GetUIManager().GetMenu() || !g_Game.GetProfileOption(EDayZProfilesOptions.HUD) || m_Hud.IsHideHudPlayer() || m_Player.IsUnconscious() || isVisionObstructionActive)
 		{
 			HideWidget();
 			return;
@@ -317,22 +336,18 @@ class ActionTargetsCursor extends ScriptedWidgetEventHandler
 		GetTarget();
 		GetActions();
 
-		bool show_target = (m_Target && !m_Hidden) || m_Interact || m_ContinuousInteract;
-		if (!show_target)
+		//! check if action has target, otherwise don't show the widget		
+		bool showTarget = (m_Target && !m_Hidden) || m_Interact || m_ContinuousInteract;
+		if (!showTarget)
 		{
-			//! check if action has target, otherwise don't show the widget
 			if (m_Single)
-			{
-				show_target = m_Single.HasTarget();
-			}
+				showTarget = m_Single.HasTarget();
 
 			if (m_Continuous)
-			{
-				show_target = show_target || m_Continuous.HasTarget();
-			}
+				showTarget = showTarget || m_Continuous.HasTarget();
 		}
 
-		if (show_target)
+		if (showTarget)
 		{
 			//! cursor with fixed position (environment interaction mainly)
 			if (m_Target.GetObject() == null && (m_Interact || m_ContinuousInteract || m_Single || m_Continuous))
@@ -492,8 +507,8 @@ class ActionTargetsCursor extends ScriptedWidgetEventHandler
 			{
 				compName = object.GetActionComponentName(compIdx);
 				object.GetActionComponentNameList(compIdx, components);
-				
-				if (object.GetActionComponentNameList(compIdx, components) == 0 && !object.IsInventoryItem())
+
+				if (!object.IsInventoryItem() && (object.HasFixedActionTargetCursorPosition() || object.GetActionComponentNameList(compIdx, components) == 0))
 				{
 					m_FixedOnPosition = true;
 					return;
@@ -706,11 +721,15 @@ class ActionTargetsCursor extends ScriptedWidgetEventHandler
 		
 		if (m_Interact)
 		{
-			m_DisplayInteractTarget = m_Interact.GetDisplayInteractObject(m_Player,m_Target);
-		} 
+			m_DisplayInteractTarget = m_Interact.GetDisplayInteractObject(m_Player, m_Target);
+		}
+		else if (m_Single)
+		{
+			m_DisplayInteractTarget = m_Single.GetDisplayInteractObject(m_Player, m_Target);
+		}
 		else if (m_ContinuousInteract)
 		{
-			m_DisplayInteractTarget = m_ContinuousInteract.GetDisplayInteractObject(m_Player,m_Target);
+			m_DisplayInteractTarget = m_ContinuousInteract.GetDisplayInteractObject(m_Player, m_Target);
 		}
 		else
 		{
@@ -721,18 +740,17 @@ class ActionTargetsCursor extends ScriptedWidgetEventHandler
 	protected void GetTarget()
 	{
 		if (!m_AM)
-		{
 			return;
-		}
 
 		m_Target = m_AM.FindActionTarget();
 		if (m_Target && m_Target.GetObject() && m_Target.GetObject().IsItemBase())
 		{
 			ItemBase item = ItemBase.Cast(m_Target.GetObject());
-			if (!item.IsTakeable() || (m_Player && m_Player.IsInVehicle()))
-			{
+			InventoryLocation invLocation = new InventoryLocation();
+			item.GetInventory().GetCurrentInventoryLocation(invLocation);
+
+			if (!item.IsTakeable() || (m_Player && m_Player.IsInVehicle()) || invLocation.GetType() != InventoryLocationType.GROUND)
 				m_Hidden = true;
-			}
 		}
 	}
 	
@@ -740,10 +758,8 @@ class ActionTargetsCursor extends ScriptedWidgetEventHandler
 	{
 		string desc = "";
 		if (action && action.GetText())
-		{
 			desc = action.GetText();
-			return desc;
-		}
+
 		return desc;
 	}
 	
@@ -973,71 +989,37 @@ class ActionTargetsCursor extends ScriptedWidgetEventHandler
 	
 		//! when cargo in container
 		if (cargoCount > 0)
-		{
 			descText = string.Format("[+] %1  %2", descText, msg);
-			itemName.SetText(descText);
-		}
 		else
-		{
 			descText = string.Format("%1  %2", descText, msg);
-			itemName.SetText(descText);
-		}
 
+		itemName.SetText(descText);
 		widget.Show(true);
 	}
 	
 	protected void SetItemHealth(int health, string itemWidget, string healthWidget, bool enabled)
 	{
-		Widget widget;
-		
-		widget = m_Root.FindAnyWidget(itemWidget);
+		Widget widget = m_Root.FindAnyWidget(itemWidget);
 		
 		if (enabled)
 		{
 			ImageWidget healthMark;
 			Class.CastTo(healthMark, widget.FindAnyWidget(healthWidget));
+			int color = 0x00FFFFFF;
 
-			switch (health)
+			if (health == -1)
 			{
-				case -1 :
-					healthMark.GetParent().Show(false);
-					break;
-				case GameConstants.STATE_PRISTINE :
-					healthMark.SetColor(Colors.COLOR_PRISTINE);
-					healthMark.SetAlpha(0.5);
-					healthMark.GetParent().Show(true);
-					break;
-				case GameConstants.STATE_WORN :
-					healthMark.SetColor(Colors.COLOR_WORN);
-					healthMark.SetAlpha(0.5);
-					healthMark.GetParent().Show(true);
-					break;
-				case GameConstants.STATE_DAMAGED :
-					healthMark.SetColor(Colors.COLOR_DAMAGED);
-					healthMark.SetAlpha(0.5);
-					healthMark.GetParent().Show(true);
-					break;
-				case GameConstants.STATE_BADLY_DAMAGED:
-					healthMark.SetColor(Colors.COLOR_BADLY_DAMAGED);
-					healthMark.SetAlpha(0.5);
-					healthMark.GetParent().Show(true);
-					break;
-				case GameConstants.STATE_RUINED :
-					healthMark.SetColor(Colors.COLOR_RUINED);
-					healthMark.SetAlpha(0.5);
-					healthMark.GetParent().Show(true);
-					break;
-				default :
-					healthMark.SetColor(0x00FFFFFF);
-					healthMark.SetAlpha(0.5);
-					healthMark.GetParent().Show(true);
-					break;			
+				healthMark.GetParent().Show(false);
+				widget.Show(enabled);
+				return;
 			}
 			
-			widget.Show(true);
+			healthMark.SetColor(ItemManager.GetItemHealthColor(health));
+			healthMark.SetAlpha(0.5);
+			healthMark.GetParent().Show(true);
 		}
-		else
-			widget.Show(false);
+		
+		widget.Show(enabled);
 	}
 	
 	protected void SetItemQuantity(int type, float current, int min, int max, string itemWidget, string quantityPBWidget, string quantityTextWidget, bool enabled)

@@ -270,8 +270,8 @@ FrameWidgetClass rootFrame {
        inheritalpha 1
        ignorepointer 1
        color 0 0 0 1
-       position 0 0
-       size 0.5 0.5
+       position 0 -0.12
+       size 0.5 0.62
        hexactpos 0
        vexactpos 0
        hexactsize 0
@@ -286,8 +286,8 @@ FrameWidgetClass rootFrame {
        inheritalpha 1
        ignorepointer 1
        color 0 0 0 1
-       position 0.5 0
-       size 0.5 0.5
+       position 0.5 -0.12
+       size 0.5 0.62
        hexactpos 0
        vexactpos 0
        hexactsize 0
@@ -304,7 +304,7 @@ FrameWidgetClass rootFrame {
        ignorepointer 1
        color 0 0 0 1
        position 0 0.5
-       size 0.5 0.5
+       size 0.5 0.62
        hexactpos 0
        vexactpos 0
        hexactsize 0
@@ -320,7 +320,7 @@ FrameWidgetClass rootFrame {
        ignorepointer 1
        color 0 0 0 1
        position 0.5 0.5
-       size 0.5 0.5
+       size 0.5 0.62
        hexactpos 0
        vexactpos 0
        hexactsize 0
@@ -417,7 +417,7 @@ FrameWidgetClass rootFrame {
      }
     }
     FrameWidgetClass Occlusion_EyePatch {
-     visible 1
+     visible 0
      inheritalpha 1
      ignorepointer 1
      position 0 0
@@ -447,6 +447,90 @@ FrameWidgetClass rootFrame {
        "flip v" 0
        filter 0
        rotation 0 0 100
+      }
+     }
+    }
+    FrameWidgetClass Occlusion_Helmet2 {
+     visible 0
+     inheritalpha 1
+     ignorepointer 1
+     position 0 0
+     size 1 1
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     userID 54
+     {
+      ImageWidgetClass Occlusion_TopLeft4 {
+       inheritalpha 1
+       ignorepointer 1
+       color 0 0 0 1
+       position -0.3 -0.09
+       size 0.8 0.9
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       image0 "set:VignetteFrames image:Mask"
+       mode blend
+       "src alpha" 1
+       stretch 1
+       "flip u" 0
+       "flip v" 1
+      }
+      ImageWidgetClass Occlusion_TopRight4 {
+       visible 1
+       inheritalpha 1
+       ignorepointer 1
+       color 0 0 0 1
+       position 0.5 -0.09
+       size 0.8 0.9
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       image0 "set:VignetteFrames image:Mask"
+       mode blend
+       "src alpha" 1
+       stretch 1
+       "flip u" 1
+       "flip v" 1
+      }
+      ImageWidgetClass Occlusion_BottomLeft4 {
+       inheritalpha 1
+       ignorepointer 1
+       color 0 0 0 1
+       position -0.06 -0.2
+       size 0.56 1.5
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       image0 "set:VignetteFrames image:Mask"
+       mode blend
+       "src alpha" 1
+       stretch 1
+       "flip u" 0
+       "flip v" 0
+      }
+      ImageWidgetClass Occlusion_BottomRight4 {
+       visible 1
+       inheritalpha 1
+       ignorepointer 1
+       color 0 0 0 1
+       position 0.5 -0.2
+       size 0.56 1.5
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       image0 "set:VignetteFrames image:Mask"
+       mode blend
+       "src alpha" 1
+       stretch 1
+       "flip u" 1
+       "flip v" 0
       }
      }
     }

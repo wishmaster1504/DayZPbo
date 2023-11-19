@@ -7,9 +7,13 @@ enum PhxInteractionLayers
 	CHARACTER,
 	VEHICLE,
 	DYNAMICITEM,
+	DYNAMICITEM_NOCHAR,
 	ROADWAY,
 	VEHICLE_NOTERRAIN,
 	CHARACTER_NO_GRAVITY,
+	RAGDOLL_NO_CHARACTER,
+
+	//! Redefinition of 'RAGDOLL_NO_CHARACTER'
 	FIREGEOM,
 
 	DOOR,
@@ -197,6 +201,8 @@ class DayZPhysics
 	
 	proto static bool	GetHitSurface(Object other, vector begPos, vector endPos, string surface);
 
+	proto static bool	GetHitSurfaceAndLiquid(Object other, vector begPos, vector endPos, string surface, out int liquidType);
+
 	proto static bool	RaycastRVProxy( notnull RaycastRVParams in, out notnull array< ref RaycastRVResult> results, array< Object > excluded = null );
 
 
@@ -208,6 +214,8 @@ class DayZPhysics
 	proto static bool	GeometryOverlapBullet(vector transform[4], dGeom geometry, PhxInteractionLayers layerMask, notnull CollisionOverlapCallback callback);
 
 	proto static bool	EntityOverlapBullet(vector transform[4], IEntity entity, PhxInteractionLayers layerMask, notnull CollisionOverlapCallback callback);
+
+	proto static bool	EntityOverlapSingleBullet(vector transform[4], IEntity entity, PhxInteractionLayers layerMask, notnull CollisionOverlapCallback callback);
 	
 	proto static bool	SphereOverlapBullet(vector position, float radius, PhxInteractionLayers layerMask, notnull CollisionOverlapCallback callback);
 	

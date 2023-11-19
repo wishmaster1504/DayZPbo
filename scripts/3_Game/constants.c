@@ -56,6 +56,7 @@ enum EffectWidgetsTypes
 	NVG_OCCLUDER = 51,
 	PUMPKIN_OCCLUDER = 52,
 	EYEPATCH_OCCLUDER = 53,
+	HELMET2_OCCLUDER = 54,
 	
 	BLEEDING_LAYER = 60,
 }
@@ -187,6 +188,8 @@ const int MENU_RESPAWN_DIALOGUE						= 40;
 const int MENU_WARNING_TELEPORT						= 41;
 const int MENU_CONNECT_ERROR						= 42;
 const int MENU_WARNING_INPUTDEVICE_DISCONNECT		= 43;
+const int MENU_SCRIPTCONSOLE_UNIVERSAL_INFO_DIALOG	= 44;
+const int MENU_MISSION_LOADER						= 45;
 
 
 const int GUI_WINDOW_MISSION_LOADER = 1;
@@ -201,6 +204,7 @@ const string CFG_RECIPESPATH = "CfgRecipes";
 const string CFG_SOUND_SHADERS = "CfgSoundShaders";
 const string CFG_SOUND_SETS = "CfgSoundSets";
 const string CFG_NONAI_VEHICLES = "CfgNonAIVehicles";
+const string CFG_SOUND_TABLES = "CfgSoundTables";
 
 /** @}*/
 
@@ -212,14 +216,16 @@ const string CFG_NONAI_VEHICLES = "CfgNonAIVehicles";
 const int		CFG_ARRAY_ITEMS_MAX		= 64;
 const string	CFG_FILE_FIXED_PROFILE	= "Scripts/profile_fixed.cfg";
 const string	CFG_FILE_USER_PROFILE	= "$profile:profile.cfg";
-const string	CFG_FILE_DEBUG_PROFILE	= "$profile:debugProfile.cfg";
+const string	CFG_FILE_DEBUG_PROFILE	= "debugProfile.cfg";
 const string	CFG_FILE_EMOTES_PROFILE	= "$profile:emotesProfile.cfg";
 const string	CFG_FILE_SEARCH_HISTORY	= "$profile:search_history.history";
-const string	CFG_FILE_ENS_HISTORY	= "$profile:script_enscript.history";
-const string	CFG_FILE_ENS_HISTORY_SERVER	= "$profile:script_enscriptServer.history";
+const string	CFG_FILE_ENS_HISTORY	= "script_enscript.history";
+const string	CFG_FILE_ENS_HISTORY_SERVER	= "script_enscriptServer.history";
 const string	CFG_FILE_SCRIPT_LOG		= "$profile:script.log";
 const string	CFG_FILE_SCRIPT_LOG_EXT	= "$profile:scriptExt.log";
 const string	CFG_FILE_ADDITIONAL_INFO= "$profile:serverInfo.cfg";
+const string 	CFG_FILE_DEBUG_DIR =	"$profile:ScriptConsole/";
+const string 	CFG_FILE_MISSION_LIST =	"$profile:missionlist.json";
 /** @}*/
 
 /**
@@ -536,6 +542,7 @@ const string PLAYER_CHAT_MSG 	= "player_chat_msg";
  */
 const string SHOW_QUICKBAR 		= "show_quickbar";
 const string SHOW_HUD 			= "show_hud";
+const string HUD_BRIGHTNESS		= "hud_brightness";
 const string ENABLE_BLEEDINGINDICATION	= "enable_bleedingindication";
 const string SHOW_CONNECTIVITYINFO	= "show_connectivityinfo";
 //const string SHOW_HUD_AUTOHIDE 	= "hud_autohide";
@@ -576,6 +583,7 @@ const float PROJECTED_CURSOR_DISTANCE = 5;//how long is the raycast from the wea
 /**
   * \ misc
  */
+
 const float DEBUG_QUICK_UNRESTRAIN_TIME = 1.0;
 const float MELEE_ITEM_DAMAGE = 1.0;
 
@@ -700,6 +708,8 @@ class GameConstants
 	const float ENVIRO_ISOLATION_HEALTHFACTOR_RUINED  	= 0.0;
 	
 	const float ENVIRO_TEMP_SOURCES_LOOKUP_RADIUS		= 20.0;
+	
+	const float LIQUID_RAIN_AMOUNT_COEF_BASE = 10.0;
 	
 	// --
 	//! various damage per second constants
@@ -839,6 +849,9 @@ class GameConstants
 	
 	//! misc
 	const float ITEM_TEMPERATURE_TO_EXPLODE_MIN = 100;
+	const float LOADING_SCREEN_HINT_INTERVAL = 14;//the time that elapses before a hint is switched during loading in screens that support hint switching
+	const float LOADING_SCREEN_HINT_INTERVAL_MIN = 8;//the minimum time that needs to remain on the count-down counter for a hint to still be changed based on the 'LOADING_SCREEN_HINT_INTERVAL'(prevents last moment hint update where the player has no time to read it)
+	
 	
 	/**
 	 * \defgroup LifetimeRefresherConstants Lifetime Refresher functionality constants
@@ -868,6 +881,12 @@ class GameConstants
 	
 	const int RESPAWN_MODE_CUSTOM = 0;
 	const int RESPAWN_MODE_RANDOM = 1;
+
+	/**
+	 * \defgroup InventoryConstants Inventory constants
+	 * \desc Constants for inventory
+	 */
+	const int INVENTORY_ENTITY_DROP_OVERLAP_DEPTH = 2; // How deep should it go looking for a free spot to drop an entity
 	
 	//----------------------------------------------------------
 	//							AI

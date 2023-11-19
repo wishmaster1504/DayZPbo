@@ -101,8 +101,8 @@ class HandsContainer: Container
 		if ( index == -1 )
 		{
 			#ifdef PLATFORM_CONSOLE
-			if ( m_MainWidget.FindAnyWidget("Selected") )
-				m_MainWidget.FindAnyWidget("Selected").Show( true );
+			if ( m_MainWidget.FindAnyWidget("Cursor") )
+				m_MainWidget.FindAnyWidget("Cursor").Show( true );
 			#endif
 			m_ScrollWidget.VScrollToPos01( 0 );
 		}
@@ -151,8 +151,8 @@ class HandsContainer: Container
 				}
 			}
 			
-			if( m_MainWidget.FindAnyWidget("Selected") )
-				m_MainWidget.FindAnyWidget("Selected").Show( false );
+			if( m_MainWidget.FindAnyWidget("Cursor") )
+				m_MainWidget.FindAnyWidget("Cursor").Show( false );
 			ScrollToActiveContainer( GetFocusedContainer() );
 		}
 	}
@@ -198,12 +198,19 @@ class HandsContainer: Container
 		EntityAI item = item_preview.GetItem();
 		InventoryItem itemAtPos = InventoryItem.Cast( item );
 		
-		if( item )
+		if( itemAtPos )
 		{
 			if ( button == MouseState.MIDDLE )
 			{
 				InspectItem( itemAtPos );
 			}
+			#ifdef DIAG_DEVELOPER	
+			if ( GetDayZGame().IsLeftCtrlDown() && button == MouseState.RIGHT )
+			{
+				ShowActionMenu( itemAtPos );
+				return;
+			}
+			#endif
 		}
 	}
 		
@@ -214,94 +221,76 @@ class HandsContainer: Container
 	
 	override bool TransferItem()
 	{
-		if(m_ActiveIndex == 0)
-		{
-			EntityAI item_in_hands = GetGame().GetPlayer().GetHumanInventory().GetEntityInHands();
-			if( item_in_hands && GetGame().GetPlayer().GetHumanInventory().CanRemoveEntityInHands() && !GetGame().GetPlayer().GetInventory().HasInventoryReservation(item_in_hands, null)  )
-			{
-				if( GetGame().GetPlayer().PredictiveTakeEntityToInventory( FindInventoryLocationType.CARGO, item_in_hands ) )
-				{
-					m_MainWidget.FindAnyWidget("Selected").Show( false );
-					m_MainWidget.FindAnyWidget("hands_preview_root").SetAlpha( 0.7 );
-					return true;
-				}
-			}
-		}
-		else if( GetFocusedContainer() )
-		{
-			return GetFocusedContainer().TransferItem();
-		}
-		return false;
-	}
-	
-	override bool CanEquip()
-	{
 		if (m_ActiveIndex == 0)
 		{
-			EntityAI item_in_hands = GetGame().GetPlayer().GetHumanInventory().GetEntityInHands();
-			if ( item_in_hands.IsInherited( Magazine ) || GetGame().GetPlayer().GetInventory().HasInventoryReservation(item_in_hands, null)  )
+			if (CanTakeToInventory())
 			{
-				return false;
-			}
-			InventoryLocation il = new InventoryLocation;
-			bool found = GetGame().GetPlayer().GetInventory().FindFreeLocationFor(item_in_hands,FindInventoryLocationType.ATTACHMENT,il);
-			if (found)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
-		else if( GetFocusedContainer() )
-		{
-			return GetFocusedContainer().CanEquip();
-		}
-		return false;
-	}
-	
-	override bool SplitItem()
-	{
-		if (m_ActiveIndex == 0)
-		{
-			ItemBase item_in_hands = ItemBase.Cast( GetGame().GetPlayer().GetHumanInventory().GetEntityInHands() );
-			if ( item_in_hands )
-			{
-				if ( item_in_hands.CanBeSplit() )
+				EntityAI item_in_hands = GetGame().GetPlayer().GetHumanInventory().GetEntityInHands();
+				if (item_in_hands && GetGame().GetPlayer().GetHumanInventory().CanRemoveEntityInHands() && !GetGame().GetPlayer().GetInventory().HasInventoryReservation(item_in_hands, null))
 				{
-					item_in_hands.OnRightClick();
-				}
-			}
-		}
-		else if( GetFocusedContainer() )
-		{
-			return GetFocusedContainer().SplitItem();
-		}
-		return false;
-	}
-	
-	override bool EquipItem()
-	{
-		if (m_ActiveIndex == 0)
-		{
-			ItemBase item_in_hands = ItemBase.Cast( GetGame().GetPlayer().GetHumanInventory().GetEntityInHands() );
-			if ( item_in_hands )
-			{
-				if ( GetGame().GetPlayer().GetHumanInventory().CanRemoveEntityInHands() && !GetGame().GetPlayer().GetInventory().HasInventoryReservation(item_in_hands, null)  )
-				{
-					if ( GetGame().GetPlayer().PredictiveTakeEntityToInventory( FindInventoryLocationType.ATTACHMENT, item_in_hands ) )
+					if (GetGame().GetPlayer().PredictiveTakeEntityToInventory( FindInventoryLocationType.CARGO, item_in_hands ))
 					{
-						m_MainWidget.FindAnyWidget("Selected").Show( false );
+						m_MainWidget.FindAnyWidget("Cursor").Show( false );
 						m_MainWidget.FindAnyWidget("hands_preview_root").SetAlpha( 0.7 );
 						return true;
 					}
 				}
 			}
 		}
-		else if( GetFocusedContainer() )
+		else if (GetFocusedContainer())
 		{
-			return GetFocusedContainer().EquipItem();
+			return GetFocusedContainer().TransferItem();
+		}
+		return false;
+	}
+	
+	override bool SplitItem()
+	{
+		if (CanSplit())
+		{
+			if (m_ActiveIndex == 0)
+			{
+				ItemBase item_in_hands = ItemBase.Cast( GetGame().GetPlayer().GetHumanInventory().GetEntityInHands() );
+				if ( item_in_hands )
+				{
+					if ( item_in_hands.CanBeSplit() )
+					{
+						item_in_hands.OnRightClick();
+					}
+				}
+			}
+			else if( GetFocusedContainer() )
+			{
+				return GetFocusedContainer().SplitItem();
+			}
+		}
+		return false;
+	}
+	
+	override bool EquipItem()
+	{
+		if (CanEquip())
+		{	
+			if (m_ActiveIndex == 0)
+			{
+				ItemBase item_in_hands = ItemBase.Cast( GetGame().GetPlayer().GetHumanInventory().GetEntityInHands() );
+				if ( item_in_hands )
+				{
+					if ( GetGame().GetPlayer().GetHumanInventory().CanRemoveEntityInHands() && !GetGame().GetPlayer().GetInventory().HasInventoryReservation(item_in_hands, null)  )
+					{
+						if ( GetGame().GetPlayer().PredictiveTakeEntityToInventory( FindInventoryLocationType.ATTACHMENT, item_in_hands ) )
+						{
+							m_MainWidget.FindAnyWidget("Cursor").Show( false );
+							m_MainWidget.FindAnyWidget("hands_preview_root").SetAlpha( 0.7 );
+							return true;
+						}
+					}
+				}
+			}
+			else if (GetFocusedContainer())
+			{
+				return GetFocusedContainer().EquipItem();
+			}
 		}
 		return false;
 	}
@@ -314,9 +303,9 @@ class HandsContainer: Container
 
 		if( item_in_hands )
 		{
-			if( m_MainWidget.FindAnyWidget( "Selected" ) )
+			if( m_MainWidget.FindAnyWidget( "Cursor" ) )
 			{
-				m_MainWidget.FindAnyWidget( "Selected" ).Show( active );
+				m_MainWidget.FindAnyWidget( "Cursor" ).Show( active );
 			}
 			
 			if( active )
@@ -328,7 +317,7 @@ class HandsContainer: Container
 		}
 		else
 		{
-			if( active )
+			if (active)
 				m_MainWidget.FindAnyWidget( "hands_preview_root" ).SetAlpha( 0.85 );
 			else
 				m_MainWidget.FindAnyWidget( "hands_preview_root" ).SetAlpha( 0.7 );
@@ -345,9 +334,9 @@ class HandsContainer: Container
 		{
 			if ( m_ActiveIndex == 0)
 			{
-				if( m_MainWidget.FindAnyWidget( "Selected" ) )
+				if( m_MainWidget.FindAnyWidget( "Cursor" ) )
 				{
-					m_MainWidget.FindAnyWidget( "Selected" ).Show( true );
+					m_MainWidget.FindAnyWidget( "Cursor" ).Show( true );
 				}
 			
 				float x, y;
@@ -397,24 +386,27 @@ class HandsContainer: Container
 	
 	override bool TransferItemToVicinity()
 	{
-		if (m_ActiveIndex == 0)
+		if (CanDrop())
 		{
-			PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
-			ItemBase item_in_hands = ItemBase.Cast(player.GetHumanInventory().GetEntityInHands());
-			if ( item_in_hands && player.CanDropEntity( item_in_hands ) && GetGame().GetPlayer().GetHumanInventory().CanRemoveEntityInHands() && !player.GetInventory().HasInventoryReservation(item_in_hands, null) )
+			if (m_ActiveIndex == 0)
 			{
-				if ( item_in_hands.GetTargetQuantityMax() < item_in_hands.GetQuantity() )
-					item_in_hands.SplitIntoStackMaxClient( null, -1 );
-				else
-					player.PhysicalPredictiveDropItem( item_in_hands );
-				m_MainWidget.FindAnyWidget("Selected").Show( false );
-				m_MainWidget.FindAnyWidget("hands_preview_root").SetAlpha( 0.7 );
-				return true;
+				PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
+				ItemBase item_in_hands = ItemBase.Cast(player.GetHumanInventory().GetEntityInHands());
+				if ( item_in_hands && player.CanDropEntity( item_in_hands ) && GetGame().GetPlayer().GetHumanInventory().CanRemoveEntityInHands() && !player.GetInventory().HasInventoryReservation(item_in_hands, null) )
+				{
+					if ( item_in_hands.GetTargetQuantityMax() < item_in_hands.GetQuantity() )
+						item_in_hands.SplitIntoStackMaxClient( null, -1 );
+					else
+						player.PhysicalPredictiveDropItem( item_in_hands );
+					m_MainWidget.FindAnyWidget("Cursor").Show( false );
+					m_MainWidget.FindAnyWidget("hands_preview_root").SetAlpha( 0.7 );
+					return true;
+				}
 			}
-		}
-		else if ( GetFocusedContainer() )
-		{
-				return GetFocusedContainer().TransferItemToVicinity();
+			else if ( GetFocusedContainer() )
+			{
+					return GetFocusedContainer().TransferItemToVicinity();
+			}
 		}
 		return false;
 	}
@@ -442,7 +434,7 @@ class HandsContainer: Container
 	{
 		if(m_ActiveIndex == 0)
 		{
-			if( ItemManager.GetInstance().IsMicromanagmentMode() )
+			if (ItemManager.GetInstance().IsMicromanagmentMode())
 			{
 				EntityAI selectedItem = ItemManager.GetInstance().GetSelectedItem();
 				if( selectedItem == GetFocusedItem() )
@@ -765,7 +757,7 @@ class HandsContainer: Container
 	{
 		if ( entity1 && entity2 ) PrintString( "Showing action menu for " + entity1.GetDisplayName() + " and " + entity2.GetDisplayName() );
 
-		ContextMenu cmenu = GetGame().GetUIManager().GetMenu().GetContextMenu();
+		ContextMenu cmenu = ContextMenu.Cast(GetGame().GetUIManager().GetMenu().GetContextMenu());
 		m_am_entity1 = entity1;
 		m_am_entity2 = entity2;
 		cmenu.Hide();
@@ -1090,8 +1082,8 @@ class HandsContainer: Container
 			
 			if( icon )
 			{
-				if( w && w.FindAnyWidget("Selected") )
-					w.FindAnyWidget("Selected").SetColor( ColorManager.BASE_COLOR );
+				if( w && w.FindAnyWidget("Cursor") )
+					w.FindAnyWidget("Cursor").SetColor( ColorManager.BASE_COLOR );
 				icon.Refresh();
 				Refresh();
 			}
@@ -1135,14 +1127,14 @@ class HandsContainer: Container
 			ItemManager.GetInstance().ShowSourceDropzone( item );
 		}
 
-		if( w.FindAnyWidget("Selected") )
+		if( w.FindAnyWidget("Cursor") )
 		{
-			w.FindAnyWidget("Selected").SetColor( color );
+			w.FindAnyWidget("Cursor").SetColor( color );
 		}
 		else
 		{
 			string name = w.GetName();
-			name.Replace( "PanelWidget", "Selected" );
+			name.Replace( "PanelWidget", "Cursor" );
 			w.FindAnyWidget( name ).SetColor( color );
 		}
 
@@ -1305,7 +1297,8 @@ class HandsContainer: Container
 			}
 		}
 		
-		m_CollapsibleHeader.ShowCollapseButtons( m_Atts || m_CargoGrid, m_Atts || m_CargoGrid );
+		m_CollapsibleHeader.ShowCollapseButtons(false);
+		//m_CollapsibleHeader.ShowCollapseButtons( m_Atts || m_CargoGrid, m_Atts || m_CargoGrid );
 		RecomputeOpenedContainers();
 		Refresh();
 		m_Parent.Refresh();
@@ -1458,7 +1451,7 @@ class HandsContainer: Container
 
 	void DoubleClick(Widget w, int x, int y, int button)
 	{
-		if( button == MouseState.LEFT )
+		if( button == MouseState.LEFT && !g_Game.IsLeftCtrlDown())
 		{
 			if( w == null )
 			{

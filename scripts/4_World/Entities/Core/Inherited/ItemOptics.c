@@ -167,28 +167,11 @@ class ItemOptics extends InventoryItemSuper
 	 **/
 	proto native float GetZeroingDistanceZoomMax();
 
-
-	
-	/*override void EEItemAttached(EntityAI item, string slot_name)
-	{
-		super.EEItemAttached(item, slot_name);
-		
-		// could maybe just ask for energy component on item?
-		if (slot_name == "BatteryD")
-		{
-			item.GetCompEM().SwitchOn();
-		}
-	}*/
-	
-	/*override void EEItemDetached(EntityAI item, string slot_name)
-	{
-		super.EEItemDetached(item, slot_name);
-		
-		if (slot_name == "BatteryD")
-		{
-			item.GetCompEM().SwitchOff();
-		}
-	}*/
+	/**
+	 * @fn		SetZeroingClampDist
+	 * @brief	Sets zeroing clamp for the optics and updates the clamp if dist > 0. Used when attached to weapon.
+	 **/
+	proto native void SetZeroingClampDist(float dist);
 	
 	override void OnWorkStart()
 	{
@@ -230,6 +213,12 @@ class ItemOptics extends InventoryItemSuper
 		super.OnWasAttached(parent, slot_id);
 		
 		SetTakeable(false);
+		
+		Weapon wep;
+		if (Class.CastTo(wep,parent))
+		{
+			SetZeroingClampDist(wep.GetZeroingClamp(wep.GetCurrentMuzzle()));
+		}
 	}
 
 	override void OnWasDetached( EntityAI parent, int slot_id )
@@ -243,6 +232,12 @@ class ItemOptics extends InventoryItemSuper
 		}
 		
 		SetTakeable(true);
+		
+		Weapon wep;
+		if (Class.CastTo(wep,parent))
+		{
+			SetZeroingClampDist(0.0);
+		}
 	}
 	
 	override void OnInventoryExit(Man player)
@@ -532,7 +527,12 @@ class ItemOptics extends InventoryItemSuper
 		
 		AddAction(ActionViewOptics);
 	}
-};	
+	
+	override void OnDebugSpawn()
+	{
+		GetInventory().CreateAttachment("Battery9V");
+	}
+}
 
 typedef ItemOptics OpticBase;
 

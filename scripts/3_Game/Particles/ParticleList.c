@@ -248,6 +248,7 @@ class ParticleList
 	// EXPLOSIONS
 	static const int EXPLOSION_LANDMINE				= RegisterParticle("explosion_landmine_01");
 	static const int EXPLOSION_TEST					= RegisterParticle("explosion_placeholder");
+	static const int EXPLOSION_GOAT					= RegisterParticle("explosion_goat");
 	
 	// ENVIRO EFX
 	static const int SMOKING_HELI_WRECK				= RegisterParticle("smoke_heli_wreck_01");
@@ -292,8 +293,17 @@ class ParticleList
 	static const int FIREWORKS_AFTERBURN_START		= RegisterParticle("fireworks_small_02");
 	static const int FIREWORKS_AFTERBURN_END		= RegisterParticle("fireworks_small_03");
 	
-	static const int GRENADE_CHEM_BREAK				= RegisterParticle("contaminated_area_gas_grenade");
+	//Fireworks anniversary
+	static const int FIREWORKS_EXPLOSION_THANKS1	= RegisterParticle("fireworks_ThankYou_anim");
+	static const int FIREWORKS_EXPLOSION_THANKS2	= RegisterParticle("fireworks_For10_anim");
+	static const int FIREWORKS_EXPLOSION_THANKS3	= RegisterParticle("fireworks_Amazing_anim");
+	static const int FIREWORKS_EXPLOSION_THANKS4	= RegisterParticle("fireworks_Years_anim");
+	static const int FIREWORKS_EXPLOSION_THANKS5	= RegisterParticle("fireworks_Dayz_anim");
 	
+	
+	//pox grenade
+	static const int GRENADE_CHEM_BREAK				= RegisterParticle("contaminated_area_gas_grenade");
+	//Claymore
 	static const int CLAYMORE_EXPLOSION				= RegisterParticle("explosion_claymore_01");
 	static const int PLASTIC_EXPLOSION				= RegisterParticle("explosion_plastic_01");
 	
@@ -301,7 +311,9 @@ class ParticleList
 	static const int WATER_JET						= RegisterParticle("water_jet");
 	static const int WATER_JET_WEAK					= RegisterParticle("water_jet_weak");
 	static const int WATER_SPILLING					= RegisterParticle("water_spilling");
-
+	
+	// Drowning bubbles
+	static const int DROWNING_BUBBLES				= RegisterParticle("breath_bubbles");
 	
 	static int RegisterParticle(string file_name)
 	{

@@ -7,6 +7,24 @@ enum ImpactTypes
 	MELEE;
 }
 
+class ImpactEffectsData
+{
+	Object 		m_DirectHit;
+	int			m_ImpactType;
+	int 		m_ComponentIndex;
+	bool		m_IsDeflected;
+	bool		m_IsWater;
+	string		m_Surface;
+	string		m_AmmoType;
+	vector 		m_InSpeed;
+	vector		m_OutSpeed;
+	vector 		m_Position;
+	vector		m_SurfaceNormal;
+	vector		m_ExitPosition;
+
+
+}
+
 class ImpactMaterials
 {
 	ref static map<string, typename> 	m_ImpactEffect;
@@ -54,6 +72,8 @@ class ImpactMaterials
 	static int FIST_HEAVY					= RegisterIgnoredAmmo("MeleeFist_Heavy");
 	static int SOFT							= RegisterIgnoredAmmo("MeleeSoft");
 	static int SOFT_HEAVY					= RegisterIgnoredAmmo("MeleeSoft_Heavy");
+	static int DUMMY						= RegisterIgnoredAmmo("Dummy_Light");
+	static int DUMMY_HEAVY					= RegisterIgnoredAmmo("Dummy_Heavy");
 	//@}
 	
 	static int RegisterSurface(string surface)
@@ -112,6 +132,11 @@ class ImpactMaterials
 			return m_ImpactEffect[surface];
 	}
 	
+	static void EvaluateImpactEffectEx(ImpactEffectsData pData)
+	{
+		EvaluateImpactEffect(pData.m_DirectHit, pData.m_ComponentIndex, pData.m_Surface, pData.m_Position, pData.m_ImpactType, pData.m_SurfaceNormal, pData.m_ExitPosition, pData.m_InSpeed, pData.m_OutSpeed, pData.m_IsDeflected, pData.m_AmmoType, pData.m_IsWater);
+	}
+	
 	static void EvaluateImpactEffect(Object directHit, int componentIndex, string surface, vector pos, int impact_type, vector surfNormal, vector exitPos, vector inSpeed, vector outSpeed, bool deflected, string ammoType, bool isWater)
 	{
 		// No impact effects wanted for this ammo
@@ -149,7 +174,7 @@ class ImpactMaterials
 					if ( object_type == "" )
 						object_type = "OBJECT_WITHOUT_CONFIG_CLASS";
 
-					ErrorEx(string.Format("Object '%1' with model file: %2.p3d has undefined 'Hit_...' material! Cannot play impact effect.", object_type, directHit.GetModelName()));
+					ErrorEx(string.Format("Object '%1' with model file: %2 has undefined 'Hit_...' material! Cannot play impact effect.", object_type, directHit.GetShapeName()));
 					eff = EffBulletImpactBase.Cast(GetImpactEffect("Hit_ErrorNoMaterial", ammoType).Spawn());
 				}
 			}
@@ -165,7 +190,7 @@ class ImpactMaterials
 		{
 			eff.EvaluateEffect(directHit, componentIndex, pos, impact_type, surfNormal, exitPos, inSpeed, outSpeed, ammoType);
 			eff.SetAutodestroy(true);
-			SEffectManager.PlayInWorld( eff, pos );
+			SEffectManager.PlayInWorld(eff, pos);
 		}
 	}
 }

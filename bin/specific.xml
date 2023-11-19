@@ -16,6 +16,9 @@
 	<context name="ironsights">
 		<input name="UALeanLeft" />
 		<input name="UALeanRight" />
+		<input name="UALeanLeftGamepad" />
+		<input name="UALeanRightGamepad" />
+		<input name="UAPersonCamSwitchSide" />
 		<input name="UAHoldBreath" />
 		<input name="UAHoldBreathToggle" />
 		<input name="UAZoomInOptics" />
@@ -174,6 +177,9 @@
     <input name="UATrackDown" />
     <input name="UALeanLeft" />
     <input name="UALeanRight" />
+	<input name="UALeanLeftGamepad" />
+	<input name="UALeanRightGamepad" />
+	<input name="UAPersonCamSwitchSide" />
 	<input name="UAEvasiveLeft" />
     <input name="UAEvasiveRight" />
   </exclude>
@@ -208,6 +214,7 @@
     <input name="UAToggleWeapons" />
     <input name="UAUIQuickbarToggle" />
     <input name="UATempRaiseWeapon" />
+    <input name="UATempRaiseWeaponGamepad" />
     <input name="UAReloadMagazine" />
 	<input name="UAPrevActionCategory" />
 	<input name="UANextActionCategory" />
@@ -356,5 +363,27 @@
 	<input name="UAUIQuickbarRadialOpen" />
 	<input name="UAUIQuickbarRadialInventoryOpen" />
   </exclude>
-
+  
+  <!-- Inputs excluded when driving vehidle (any seat) -->
+  <exclude name="vehicledriving">
+	<input name="UATempRaiseWeapon" />
+	<input name="UATempRaiseWeaponGamepad" />
+  </exclude>
+  
+  <!-- Inputs excluded when swimming -->
+  <exclude name="swimming">
+	<input name="UATempRaiseWeapon" />
+	<input name="UATempRaiseWeaponGamepad" />
+  </exclude>
+  
+  <!-- Inputs excluded when climbing ladder -->
+  <exclude name="ladderclimbing">
+	<input name="UATempRaiseWeapon" />
+	<input name="UATempRaiseWeaponGamepad" />
+  </exclude>
+  
+  <!-- Inputs excluded when using the ActionViewOptics -->
+  <exclude name="actonViewOpticExcl">
+	<input name="UAGetOver" />
+  </exclude>
 </inputs>

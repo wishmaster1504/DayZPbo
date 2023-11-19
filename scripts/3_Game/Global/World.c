@@ -6,6 +6,12 @@ class World: Managed
 	proto void CheckSoundObstruction(EntityAI source,  bool inSource, out float obstruction, out float occlusion);
 
 	proto native void	GetPlayerList(out array<Man> players);
+
+	/**
+	\brief Sets the world time acceleration, overriding config. Mostly used for debug purposes.
+		\param timeMultiplier 0-64 acceleration value, -1 to reset back
+	*/
+	proto native void SetTimeMultiplier(float timeMultiplier);
 	
 	/**
 	\brief Get actual ingame world time
@@ -63,6 +69,14 @@ class World: Managed
 	
 	proto native void SetExplicitVolumeFactor_EnvSounds2D(float factor, float fadeTime);
 	
+	
+	/**
+	\brief Affects env sound controller value 'Shooting' 
+		\param sound position
+		\param relative value (0..1) - how much should be value decreased
+	*/		
+	proto native void AddEnvShootingSource(vector position, float shootingValDecrease);
+	
 	proto int GetWorldSize();
 
 	/**
@@ -94,7 +108,20 @@ class World: Managed
 	proto native void SetUserLightingLerp(float val);
 
 	
+	/**
+	returns reference to AIWorld
+	*/	
 	proto native AIWorld GetAIWorld();
+	
+	/**
+	For entities that aren't a house, any animation source that contains "door" is treated as a door by the pathgraph.
+	Using the phase value where 0=CLOSED, 1=OPENED, we can update the state of the door without regenerating the tile
+	*/	
+	proto native void UpdatePathgraphDoorByAnimationSourceName(notnull Object object, string animSourceName);
+	
+	proto native void MarkObjectForPathgraphUpdate(Object object);
+	proto native void ProcessMarkedObjectsForPathgraphUpdate();
+
 	
 	/*!
 	@code

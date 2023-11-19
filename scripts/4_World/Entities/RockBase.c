@@ -1,25 +1,19 @@
-class RockBase: Object 
+class RockBase : Object 
 {
 	override bool IsRock()
 	{
 		return true;
 	}
+	
+	override bool CanBeAutoDeleted()
+	{
+		return false;
+	}
 
 	int GetAmountOfDrops(ItemBase item)
 	{
-		if (item)
-		{
-			switch (item.GetType())
-			{
-			case "Pickaxe":
-				return 4;
-	 		case "SledgeHammer":
-				return 8;
-			}
-		}
-
-		return 1;
-	}	
+		return -1;
+	}
 	
 	/* Defines the yield of the action*/
 	void GetMaterialAndQuantityMap(ItemBase item, out map<string,int> output_map)
@@ -34,6 +28,7 @@ class RockBase: Object
 		case "Pickaxe":
 		case "SledgeHammer":
 		case "Hammer":
+		case "Mace":
 			output_map.Insert("Stone",1);
 			break;
  		case "PipeWrench":
@@ -64,6 +59,7 @@ class RockBase: Object
 			case "Crowbar":
 				return 50;
 			case "Hammer":
+			case "Mace":
 				return 40;
 			}
 		}
