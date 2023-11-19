@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{CC8294D443661E5B}Graphics/Particles/fireworks_small_01.ptc"
+ Author "3643"
+ ChangeDate -1452577659
+ Configurations {
+  PTCResourceClass PC {
+  }
+  PTCResourceClass XBOX_ONE : PC {
+  }
+  PTCResourceClass PS4 : PC {
+  }
+  PTCResourceClass LINUX : PC {
+  }
+ }
+}

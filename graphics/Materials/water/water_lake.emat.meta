@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{3C85A615E3ED80B0}Graphics/Materials/water/water_lake.emat"
+ Author "6886"
+ ChangeDate -1202492167
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass LINUX : PC {
+  }
+ }
+}

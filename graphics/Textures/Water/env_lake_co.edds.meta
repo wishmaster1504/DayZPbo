@@ -1,0 +1,16 @@
+MetaFileClass {
+ Name "{46C92AE52447906C}Enfusion/Graphics/Textures/Water/env_lake_co.edds"
+ Author "6886"
+ ChangeDate -1817482005
+ Configurations {
+  TGAResourceClass PC {
+   SourceFile "env_lake_co.tga"
+  }
+  TGAResourceClass XBOX_ONE : PC {
+  }
+  TGAResourceClass PS4 : PC {
+  }
+  TGAResourceClass LINUX : PC {
+  }
+ }
+}

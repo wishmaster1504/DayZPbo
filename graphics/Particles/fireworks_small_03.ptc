@@ -1,0 +1,69 @@
+EffectDef {
+ Emitors {
+  EmitorDef smoke {
+   MaxNum 80
+   BirthRate 8
+   BirthRateVel 10
+   Offset 0 0.02 0
+   Material "{06C185200574A055}Graphics/Particles/materials/smoke/smoke_cloud_01_b_trans_roadflare_01.emat"
+   SizeMultiplier 0.3
+   SizeRND 0.05
+   RandomRotDir 1
+   RotMultiplier 50
+   RandomAngle 1
+   Velocity 0.1
+   VelocityRND 0.3
+   VelAffect 0
+   AirResistance 3
+   AirResistanceRND 1
+   Wind 1
+   RandomFrame 1
+   LifeTime 5
+   LifeTimeRND 0.3
+   Color {
+    0 0 0 0 0.4643 0.1392 0.1203 0.1139 1 0 0 0
+   }
+   Alpha {
+    0 0 0.125 0.6 0.5 0.25 1 0
+   }
+   Size {
+    0 0.15 1 1
+   }
+   Repeat 1
+   BRateMast {
+    0 1 1 0.48734
+   }
+  }
+  EmitorDef sparks_fire {
+   ConeAngle 360 0 30
+   BirthRate 10
+   BirthRateRND 10
+   LocalTransform 1
+   Material "{3E6CE4D61F8AC71F}Graphics/Particles/materials/fire/fire_medium_camp_02.emat"
+   CenterX 0
+   CenterY -0.7
+   ScaleX 0.361
+   SizeMultiplier 0.05
+   SizeRND 0.1
+   VelAngle 1
+   BillboardingType LockedAxis
+   Velocity 0.1
+   VelocityRND 0.1
+   RandomFrame 1
+   LifeTime 0.1
+   LifeTimeRND 0.05
+   Color {
+    0 1 1 1 1 1 0 0
+   }
+   Alpha {
+    0 1 0.125 1 1 0
+   }
+   Size {
+    0 0 1 1
+   }
+   ColorMast {
+    0 1 1 1 1 0.2532 0 0
+   }
+  }
+ }
+}

@@ -1,0 +1,18 @@
+MetaFileClass {
+ Name "{0B829A150C6A13E5}Graphics/Particles/sprites/sparks_06.tga"
+ Author "3643"
+ ChangeDate 1551051909
+ Configurations {
+  TGAResourceClass PC {
+   SourceFile "sparks_06.tga"
+   FormatCompress Best
+   Conversion DXTCompression
+  }
+  TGAResourceClass XBOX_ONE : PC {
+  }
+  TGAResourceClass PS4 : PC {
+  }
+  TGAResourceClass LINUX : PC {
+  }
+ }
+}

@@ -1,0 +1,9 @@
+ParticleSprite {
+ AlbedoMap "{00DB5AFE43BFC32C}Graphics/Particles/sprites/steam_cloud.edds" 
+ Color 0.6078 0.6078 0.6078 1
+ Diffuse 0.6078 0.6078 0.6078 1
+ Emissive 0.0392 0.0392 0.0392 0.0392
+ Sort translucent
+ BlendMode Additive_AlphaModulate
+ Softness 2
+}

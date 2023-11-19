@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{A1C2A33044F4946D}Graphics/Particles/materials/fire/sparks_06.emat"
+ Author "3643"
+ ChangeDate 1649175684
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass LINUX : PC {
+  }
+ }
+}

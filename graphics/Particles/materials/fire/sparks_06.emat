@@ -1,0 +1,8 @@
+Particle {
+ AlbedoMap "{0B829A150C6A13E5}Graphics/Particles/sprites/sparks_06.edds" 
+ Emissive 1 1 1 0
+ BlendMode Additive_AlphaModulate
+ TileU 8
+ CameraBlendFar 0.001
+ BidirLightScale 0
+}

@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{AFF6D0E066297564}Graphics/Particles/fire_small_broom_torch_01.ptc"
+ Author "3952"
+ ChangeDate 799747150
+ Configurations {
+  PTCResourceClass PC {
+  }
+  PTCResourceClass XBOX_ONE : PC {
+  }
+  PTCResourceClass PS4 : PC {
+  }
+  PTCResourceClass LINUX : PC {
+  }
+ }
+}

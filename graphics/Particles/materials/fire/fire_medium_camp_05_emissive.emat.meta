@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{2BF493CF258D1CBD}Graphics/Particles/materials/fire/fire_medium_camp_05_emissive.emat"
+ Author "3643"
+ ChangeDate -1515492247
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass LINUX : PC {
+  }
+ }
+}

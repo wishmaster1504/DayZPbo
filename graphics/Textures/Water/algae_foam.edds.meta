@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{2F8BDD7FA4769A6D}Graphics/Textures/Water/algae_foam.tga"
+ Author "6886"
+ ChangeDate -1984271109
+ Configurations {
+  TGAResourceClass PC {
+   SourceFile "algae_foam.tga"
+   Conversion DXTCompression
+  }
+  TGAResourceClass XBOX_ONE : PC {
+  }
+  TGAResourceClass PS4 : PC {
+  }
+  TGAResourceClass LINUX : PC {
+  }
+ }
+}
