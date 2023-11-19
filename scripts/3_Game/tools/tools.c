@@ -223,6 +223,7 @@ class TimerBase: Managed
 	protected float m_duration;
 	protected float m_time;
 	protected array<TimerBase> m_timerQueue;
+	protected float m_RunTime;
 
 	void ~TimerBase()
 	{
@@ -272,6 +273,7 @@ class TimerBase: Managed
 	{
 		if (IsRunning())
 		{
+			m_RunTime += timeslice;
 			m_time = m_time + timeslice;
 	
 			if (m_time >= m_duration)
@@ -303,16 +305,24 @@ class TimerBase: Managed
 		m_timerQueue = NULL;
 	}
 
-	float GetTime() {
-			return m_time;
+	float GetTime()
+	{
+		return m_time;
 	}
 		
-	float GetDuration() {
-			return m_duration;
+	float GetDuration()
+	{
+		return m_duration;
 	}
 		
-	float GetRemaining() {
-			return m_duration - m_time;
+	float GetRemaining()
+	{
+		return m_duration - m_time;
+	}
+	
+	float GetRunTime()
+	{
+		return m_RunTime;
 	}
 		
 	protected void OnInit(int category)
@@ -329,6 +339,7 @@ class TimerBase: Managed
 		
 	protected void OnStart(float duration, bool loop)
 	{
+		m_RunTime = 0;
 		m_duration = duration;
 		m_loop = loop;
 		m_time = 0;
@@ -435,9 +446,9 @@ class WidgetFadeTimer extends TimerBase
 	*/
 	void FadeIn(Widget w, float time, bool continue_ = false)
 	{
-		float alpha = w.GetAlpha();
+		m_alpha = w.GetAlpha();
 		
-		if (continue_ && alpha > 0.95)
+		if (continue_ && m_alpha > 0.95)
 		{
 			w.SetAlpha(1.0);
 			w.Show(true);
@@ -451,14 +462,14 @@ class WidgetFadeTimer extends TimerBase
 	
 		if (m_widget)
 		{
-			alpha = m_widget.GetAlpha();
+			m_alpha = m_widget.GetAlpha();
 			m_widget.SetAlpha(0);
 			m_widget.Show(true);
 		}
 	
 		if (continue_)
 		{
-			m_time = alpha * time;
+			m_time = m_alpha * time;
 		}
 	}
 
@@ -496,7 +507,7 @@ class WidgetFadeTimer extends TimerBase
 			m_time = (1.0 - m_alpha) * time;
 		}
 	}
-
+	
 	override private void OnTimer()
 	{
 		if (m_widget)
@@ -512,22 +523,24 @@ class WidgetFadeTimer extends TimerBase
 			}
 		}
 	}
-
+	
 	override private void OnUpdate()
 	{
 		float timeDiff = m_time / m_duration;
-		float progress = Math.Max( 0.0, timeDiff );
-	
-		if ( m_widget )
+		float progress;
+		if (m_widget)
 		{
-			if ( m_fadeIn )
+			if (m_fadeIn)
 			{
-				m_widget.SetAlpha( timeDiff );
+				progress = timeDiff;
 			}
 			else
 			{
-				m_widget.SetAlpha( m_alpha - timeDiff );
+				progress = Math.Lerp(m_alpha,0,timeDiff);
+				progress = Math.Clamp(progress,0,1);
 			}
+			
+			m_widget.SetAlpha(progress);
 		}
 	}
 };

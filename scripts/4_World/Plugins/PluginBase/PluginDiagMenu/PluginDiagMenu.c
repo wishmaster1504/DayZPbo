@@ -89,9 +89,21 @@ class PluginDiagMenu : PluginBase
 				//---------------------------------------------------------------
 				// LEVEL 2 - Script > Vehicles
 				//---------------------------------------------------------------
-				DiagMenu.RegisterItem(DiagMenuIDs.VEHICLE_DEBUG_OUTPUT, "lalt+6", "Crash Log", DiagMenuIDs.VEHICLES, "None, Basic, Extended, Contact, Basic+Contact");
+				DiagMenu.RegisterItem(DiagMenuIDs.VEHICLE_DEBUG_OUTPUT, "", "Crash Log", DiagMenuIDs.VEHICLES, "None, Basic, Extended, Contact, Basic+Contact");
 				DiagMenu.RegisterBool(DiagMenuIDs.VEHICLE_DUMP_CRASH_DATA, "lalt+7", "Dump Crash Data", DiagMenuIDs.VEHICLES);
 			}
+
+			//---------------------------------------------------------------
+			// LEVEL 1 - Script
+			//---------------------------------------------------------------
+			DiagMenu.RegisterMenu(DiagMenuIDs.INVENTORY_MENU, "Inventory", DiagMenuIDs.SCRIPTS_MENU);
+			{
+				//---------------------------------------------------------------
+				// LEVEL 2 - Script > Inventory
+				//---------------------------------------------------------------		
+				DiagMenu.RegisterBool(DiagMenuIDs.INVENTORY_ENTITY_PLACEMENT_CALLBACK_DEBUG, "", "Placement Debug", DiagMenuIDs.INVENTORY_MENU);
+			}
+
 			//---------------------------------------------------------------
 			// LEVEL 1 - Script
 			//---------------------------------------------------------------
@@ -133,6 +145,8 @@ class PluginDiagMenu : PluginBase
 				DiagMenu.RegisterBool(DiagMenuIDs.CHEATS_RESET_PLAYER_MAX, "lalt+3", "Reset Player Max", DiagMenuIDs.CHEATS_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.CHEATS_INVENTORY_ACCESS, "", "Inventory Access", DiagMenuIDs.CHEATS_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.CHEATS_FIX_ITEMS, "", "Fix Inventory Items", DiagMenuIDs.CHEATS_MENU);
+				DiagMenu.RegisterBool(DiagMenuIDs.CHEATS_CREATE_HIT, "lalt+5", "Create Hit Heavy", DiagMenuIDs.CHEATS_MENU);
+				DiagMenu.RegisterBool(DiagMenuIDs.CHEATS_CREATE_HIT_LIGHT, "lalt+6", "Create Hit Light", DiagMenuIDs.CHEATS_MENU);
 			}
 			
 			//---------------------------------------------------------------
@@ -143,7 +157,7 @@ class PluginDiagMenu : PluginBase
 				//---------------------------------------------------------------
 				// LEVEL 2 - Script > Player Agents
 				//---------------------------------------------------------------
-				DiagMenu.RegisterBool(DiagMenuIDs.PLAYER_AGENTS_INJECTS_SHOW, "lalt+5", "Allow Inject Actions", DiagMenuIDs.PLAYER_AGENTS_MENU);
+				DiagMenu.RegisterBool(DiagMenuIDs.PLAYER_AGENTS_INJECTS_SHOW, "", "Allow Inject Actions", DiagMenuIDs.PLAYER_AGENTS_MENU);
 			}
 			
 			//---------------------------------------------------------------
@@ -180,6 +194,10 @@ class PluginDiagMenu : PluginBase
 				//---------------------------------------------------------------
 				// LEVEL 2 - Script > Misc
 				//---------------------------------------------------------------
+				DiagMenu.RegisterBool(DiagMenuIDs.MISC_ACTION_ON_CURSOR, "", "Perform Diag On Cursor", DiagMenuIDs.MISC_MENU);
+#ifdef DIAG_MISC_ACTION_ON_CURSOR
+					DiagMenu.SetValue(DiagMenuIDs.MISC_ACTION_ON_CURSOR, true);
+#endif
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_DISABLE_PERSONAL_LIGHT, "", "Disable Personal Light", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_ITEM_DEBUG_ACTIONS, "", "Item Debug Actions", DiagMenuIDs.MISC_MENU); // Is enabled by default now
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_LOG_PLAYER_STATS, "", "Log Player Stats", DiagMenuIDs.MISC_MENU);
@@ -196,16 +214,26 @@ class PluginDiagMenu : PluginBase
 				// LEVEL 2 - Script > Misc
 				//---------------------------------------------------------------
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_PERMANENT_CROSSHAIR, "", "Enable permanent crosshair", DiagMenuIDs.MISC_MENU);
+				DiagMenu.RegisterBool(DiagMenuIDs.MISC_TELEPORT_BREAKS_SYNC, "", "Teleport Breaks Sync", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_VEHICLE_GETOUT_BOX, "", "Debug transport freespace", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_VEHICLE_GETOUT_RAYCAST, "", "Debug transport get out raycast", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_TOGGLE_HUD, "", "Toggle HUD on/off", DiagMenuIDs.MISC_MENU);
-				DiagMenu.RegisterBool(DiagMenuIDs.MISC_ENVIRONMENT_DEBUG, "", "Show Environment stats", DiagMenuIDs.MISC_MENU);
+				DiagMenu.RegisterMenu(DiagMenuIDs.MISC_ENVIRONMENT_MENU, "Environment", DiagMenuIDs.MISC_MENU);
+				{
+					//---------------------------------------------------------------
+					// LEVEL 3 - Script > Misc > Environment
+					//---------------------------------------------------------------
+					DiagMenu.RegisterBool(DiagMenuIDs.MISC_ENVIRONMENT_DEBUG, "", "Show Environment stats", DiagMenuIDs.MISC_ENVIRONMENT_MENU);
+					DiagMenu.RegisterBool(DiagMenuIDs.MISC_ENVIRONMENT_LOGGING_DRYWET, "", "Log Player Dry/Wetness", DiagMenuIDs.MISC_ENVIRONMENT_MENU, false);
+
+				}
+				DiagMenu.RegisterBool(DiagMenuIDs.MISC_FALLDAMAGE_DEBUG, "", "Show FallDamage stats", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterRange(DiagMenuIDs.MISC_DISPLAY_PLAYER_INFO, "", "Display Player Info", DiagMenuIDs.MISC_MENU, "0,2,0,1");
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_UNIVERSAL_TEMPERATURE_SOURCES, "lalt+u", "Universal Temp Sources", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_DRAW_CHECKERBOARD, "", "Draw Checkerboard on screen", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_BULLET_IMPACT, "", "BulletImpact", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_PRESENCE_NOTIFIER_DBG, "", "Show Presence to AI dbg", DiagMenuIDs.MISC_MENU);
-				DiagMenu.RegisterBool(DiagMenuIDs.MISC_GO_UNCONSCIOUS, "", "Go Unconscious", DiagMenuIDs.MISC_MENU);
+				DiagMenu.RegisterBool(DiagMenuIDs.MISC_GO_UNCONSCIOUS, "lctrl+m", "Go Unconscious", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_GO_UNCONSCIOUS_DELAYED, "", "Uncons. in 10sec", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_QUICK_RESTRAIN, "", "Quick Restrain", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterMenu(DiagMenuIDs.MISC_HAIR_MENU, "Hair Hiding", DiagMenuIDs.MISC_MENU);
@@ -228,7 +256,7 @@ class PluginDiagMenu : PluginBase
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_SHOW_PLUG_ARROWS, "", "Show Energy Manager Plug Arrows", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_BREATH_VAPOR_LVL, "", "Breath Vapor", DiagMenuIDs.MISC_MENU);
 					DiagMenu.SetValue(DiagMenuIDs.MISC_BREATH_VAPOR_LVL, true);				
-				DiagMenu.RegisterBool(DiagMenuIDs.MISC_TARGETABLE_BY_AI, "", "Toggle Targetable By AI", DiagMenuIDs.MISC_MENU);
+				DiagMenu.RegisterBool(DiagMenuIDs.MISC_TARGETABLE_BY_AI, "lalt+t", "Toggle Targetable By AI", DiagMenuIDs.MISC_MENU);
 					DiagMenu.SetValue(DiagMenuIDs.MISC_TARGETABLE_BY_AI, true);
 				DiagMenu.RegisterMenu(DiagMenuIDs.MISC_HIT_INDICATION_MENU, "Hit Indication", DiagMenuIDs.MISC_MENU);
 				{
@@ -247,13 +275,18 @@ class PluginDiagMenu : PluginBase
 					DiagMenu.RegisterRange(DiagMenuIDs.MISC_HIT_INDICATION_ROTATION, "", "Rotation Override", DiagMenuIDs.MISC_HIT_INDICATION_MENU, "0, 360, 0, 15");
 					DiagMenu.RegisterRange(DiagMenuIDs.MISC_HIT_INDICATION_SCATTER, "", "Direction Scatter", DiagMenuIDs.MISC_HIT_INDICATION_MENU, "0, 90, 0, 1");
 					DiagMenu.RegisterBool(DiagMenuIDs.MISC_HIT_INDICATION_DISABLE_PPE, "", "Disable Hit PPE", DiagMenuIDs.MISC_HIT_INDICATION_MENU);
-				}			
+				}
 				//---------------------------------------------------------------
 				// LEVEL 2 - Script > Misc
 				//---------------------------------------------------------------	
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_FREEZE_ENTITY, "lalt+x", "Freeze entity", DiagMenuIDs.MISC_MENU);		
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_CONNECTION_STATS, "lalt+4", "Show Connection Stats", DiagMenuIDs.MISC_MENU);
 				DiagMenu.RegisterBool(DiagMenuIDs.MISC_PLAYER_SYMPTOMS_SHOW, "", "Show States", DiagMenuIDs.MISC_MENU);
+				DiagMenu.RegisterBool(DiagMenuIDs.MISC_INPUT_DEVICE_DISCONNECT_DBG, "", "InputDevice states", DiagMenuIDs.MISC_MENU);
+				DiagMenu.RegisterBool(DiagMenuIDs.MISC_DEBUG_MONITOR, "", "Debug Monitor", DiagMenuIDs.MISC_MENU);
+				DiagMenu.RegisterRange(DiagMenuIDs.MISC_FORCE_HINT_INDEX, "", "Force Hint Index", DiagMenuIDs.MISC_MENU, "-1, 512, -1, 1");
+				if (UiHintPanel.m_ForcedIndex != -1)
+					DiagMenu.SetRangeValue(DiagMenuIDs.MISC_FORCE_HINT_INDEX,UiHintPanel.m_ForcedIndex);
 			}
 			
 			//---------------------------------------------------------------
@@ -381,6 +414,7 @@ class PluginDiagMenu : PluginBase
 					DiagMenu.RegisterBool(DiagMenuIDs.LOGS_INVENTORY_RESERVATION, "", "Log Reservations", DiagMenuIDs.LOGS_INVENTORY_MENU);
 					DiagMenu.RegisterBool(DiagMenuIDs.LOGS_INVENTORY_HFSM, "", "Log HandFSM", DiagMenuIDs.LOGS_INVENTORY_MENU);
 				}
+				DiagMenu.RegisterBool(DiagMenuIDs.LOGS_BLEEDING_CHANCES, "", "Bleeding Chances Logs", DiagMenuIDs.LOGS_MENU);
 			}
 			
 			//---------------------------------------------------------------
@@ -499,6 +533,9 @@ class PluginDiagMenu : PluginBase
 	//---------------------------------------------
 	void OnRPC(PlayerBase player, int rpc_type, ParamsReadContext ctx)
 	{
+		EntityAI parent;
+		Class.CastTo(parent, player.GetParent());
+
 		switch (rpc_type)
 		{
 			//---------------------------------------------------------------
@@ -568,18 +605,35 @@ class PluginDiagMenu : PluginBase
 					{
 						case 0:
 						{
+							if (parent)
+							{
+								parent.SetAllowDamage(true);
+								parent.SetCanBeDestroyed(true);
+							}
+
 							player.SetAllowDamage(true);
 							player.SetCanBeDestroyed(true);
 							break;
 						}
 						case 1:
 						{
+							if (parent)
+							{
+								parent.SetAllowDamage(true);
+								parent.SetCanBeDestroyed(false);
+							}
+
 							player.SetAllowDamage(true);
 							player.SetCanBeDestroyed(false);
 							break;
 						}
 						case 2:
 						{
+							if (parent)
+							{
+								parent.SetAllowDamage(false);
+							}
+
 							player.SetAllowDamage(false);
 							break;
 						}
@@ -591,8 +645,8 @@ class PluginDiagMenu : PluginBase
 			//---------------------------------------------------------------
 			case ERPCs.DIAG_CHEATS_DISABLE_STAMINA:
 			{
-				if (ctx.Read(CachedObjectsParams.PARAM1_INT))
-					player.SetStaminaEnabled(CachedObjectsParams.PARAM1_INT.param1);
+				if (ctx.Read(CachedObjectsParams.PARAM1_BOOL))
+					player.SetStaminaDisabled(CachedObjectsParams.PARAM1_BOOL.param1);
 				break;
 			}
 			
@@ -622,6 +676,20 @@ class PluginDiagMenu : PluginBase
 			case ERPCs.DIAG_CHEATS_ITEMS_FIX:
 			{
 				player.FixAllInventoryItems();
+				break;
+			}
+			//---------------------------------------------------------------
+			//---------------------------DAMAGE DEBUG------------------------
+			// hardcoded for Heavy and Light, but Light can be converted to some sort of setup if we need to have even more times with more settings, ie. we could first set-up the hit params and then perform it
+			case ERPCs.DIAG_CHEATS_CREATE_HIT:
+			{
+				player.ProcessDirectDamage(DamageType.CUSTOM, player, "", "Dummy_Heavy", "0 0 0");
+				break;
+			}
+			
+			case ERPCs.DIAG_CHEATS_CREATE_HIT_LIGHT:
+			{
+				player.ProcessDirectDamage(DamageType.CUSTOM, player, "", "MeleeFist", "0 0 0");
 				break;
 			}
 			
@@ -693,14 +761,14 @@ class PluginDiagMenu : PluginBase
 				if (ctx.Read( CachedObjectsParams.PARAM1_FLOAT))
 				{
 					//reset playtime
-					player.StatUpdate("playtime", player.StatGet("playtime") * -1);
+					player.StatUpdate(AnalyticsManagerServer.STAT_PLAYTIME, player.StatGet(AnalyticsManagerServer.STAT_PLAYTIME) * -1);
 					//set new playtime
-					player.StatUpdate("playtime", CachedObjectsParams.PARAM1_FLOAT.param1 );
-					player.SetLastShavedSeconds( 0 );
+					player.StatUpdate(AnalyticsManagerServer.STAT_PLAYTIME, CachedObjectsParams.PARAM1_FLOAT.param1 );
+					player.SetLastShavedSeconds(0);
 					//update lifespan
 					PluginLifespan pluginLifespann = PluginLifespan.Cast(GetPlugin(PluginLifespan));
 					pluginLifespann.ChangeFakePlaytime( player, CachedObjectsParams.PARAM1_FLOAT.param1 );
-					pluginLifespann.UpdateLifespan( player, true );
+					pluginLifespann.UpdateLifespan(player, true);
 				}
 				break;
 			}
@@ -715,7 +783,11 @@ class PluginDiagMenu : PluginBase
 					player.GetPlayerStats().SetAllowLogs(CachedObjectsParams.PARAM1_BOOL.param1);
 				break;
 			}
-						
+			
+			//---------------------------------------------------------------
+			
+			//---------------------------------------------------------------
+			// LEVEL 2 - Script > Misc -> Environment
 			//---------------------------------------------------------------
 			case ERPCs.DIAG_MISC_ENVIRONMENT_DEBUG:
 			{
@@ -723,6 +795,29 @@ class PluginDiagMenu : PluginBase
 				{
 					if (player.m_Environment)
 						player.m_Environment.m_Debug = CachedObjectsParams.PARAM1_BOOL.param1;
+				}
+				break;
+			}
+			
+			case ERPCs.DIAG_MISC_ENVIRONMENT_LOGGING_DRYWET:
+			{
+				if (ctx.Read(CachedObjectsParams.PARAM1_BOOL))
+				{
+					if (player.m_Environment)
+						player.m_Environment.m_DebugLogDryWet = CachedObjectsParams.PARAM1_BOOL.param1;
+				}
+				break;
+			}
+			
+			//---------------------------------------------------------------
+			// LEVEL 2 - Script > Misc
+			//---------------------------------------------------------------
+			case ERPCs.DIAG_MISC_FALLDAMAGE_DEBUG:
+			{
+				if (ctx.Read(CachedObjectsParams.PARAM1_BOOL))
+				{
+					if (player.GetFallDamage())
+						player.GetFallDamage().m_Debug = CachedObjectsParams.PARAM1_BOOL.param1;
 				}
 				break;
 			}
@@ -777,6 +872,14 @@ class PluginDiagMenu : PluginBase
 			{
 				if (ctx.Read(CachedObjectsParams.PARAM1_BOOL))
 					player.m_CanBeTargetedDebug = CachedObjectsParams.PARAM1_BOOL.param1;
+				break;
+			}
+			
+			//---------------------------------------------------------------
+			case ERPCs.DIAG_MISC_DEBUG_MONITOR:
+			{
+				if (ctx.Read(CachedObjectsParams.PARAM1_BOOL))
+					GetGame().SetDebugMonitorEnabled(CachedObjectsParams.PARAM1_BOOL.param1);
 				break;
 			}
 			
@@ -919,6 +1022,13 @@ class PluginDiagMenu : PluginBase
 				break;
 			}
 			
+			//---------------------------------------------------------------
+			case ERPCs.DIAG_LOGS_BLEEDING_CHANCES:
+			{
+				if (ctx.Read(CachedObjectsParams.PARAM1_BOOL))
+					LogManager.BleedingChancesLogEnable(CachedObjectsParams.PARAM1_BOOL.param1);
+				break;
+			}
 			
 			//---------------------------------------------------------------
 			// LEVEL 2 - Script > Base Building
@@ -963,7 +1073,7 @@ class PluginDiagMenu : PluginBase
 				player.m_CameraToolsMenuClient.OnRPC(ctx);
 				break;
 			}
-					
+
 			
 			//---------------------------------------------------------------
 			// LEVEL 2 - Script > Time Accel
@@ -1013,6 +1123,23 @@ class PluginDiagMenu : PluginBase
 					SetTimeAccelMenuState(tap2.param1, bigFactor, smallFactor, tap2.param3);
 					FeatureTimeAccel.m_CurrentTimeAccel = tap2;
 				}
+				break;
+			}
+			
+			//---------------------------------------------------------------
+			// LEVEL 2 - Script > Vehicles
+			//---------------------------------------------------------------
+			case ERPCs.DIAG_VEHICLE_DEBUG_OUTPUT:
+			{
+				if (ctx.Read(CachedObjectsParams.PARAM1_INT))
+					CarScript.DEBUG_OUTPUT_TYPE = CachedObjectsParams.PARAM1_INT.param1;
+				break;
+			}
+			//---------------------------------------------------------------
+			case ERPCs.DIAG_VEHICLES_DUMP_CRASH_DATA_REQUEST:
+			{
+				if (ctx.Read(CachedObjectsParams.PARAM1_BOOL))
+					CrashDebugData.SendData(player);
 				break;
 			}
 		}

@@ -1,10 +1,11 @@
 EffectDef {
  Emitors {
   EmitorDef red_smoke {
+   ConeAngle 360 10 30
    MaxNum 100
    BirthRate 10
    BirthRateVel 10
-   Offset 0 0.1 0
+   Offset 0 0 0
    Material "{06C185200574A055}Graphics/Particles/materials/smoke/smoke_cloud_01_b_trans_roadflare_01.emat"
    SizeMultiplier 0.9
    SizeRND 0.2
@@ -24,17 +25,30 @@ EffectDef {
     0 1 0.3098 0.102 0.4952 0.6126 0.3534 0.3372 1 0.5519 0.5084 0.5084
    }
    Alpha {
-    0 0 0.125 0.6 0.5 0.25 1 0
+    0 0 0.05938 0.45926 0.5 0.25 1 0
    }
    Size {
     0 0.15 1 1
+   }
+   Repeat 0
+   ColorMast {
+    0 1 1 1 0.1103 0.2074 0.2074 0.2148 1 0 0 0
+   }
+   AlphaMast {
+    0 1 1 0.20741
+   }
+   SizeMast {
+    0 1 1 0.37778
+   }
+   VelocityMast {
+    0 1 0.66967 0.28889 1 0.17778
    }
   }
   EmitorDef red_smoke_bright {
    MaxNum 50
    BirthRate 30
    BirthRateVel 10
-   Offset 0 0.05 0
+   Offset 0 0 0
    Material "{5829AC63BAF92E5A}Graphics/Particles/materials/smoke/smoke_cloud_01_b_trans_roadflare_02.emat"
    SizeMultiplier 0.9
    SizeRND 0.2
@@ -58,6 +72,13 @@ EffectDef {
    }
    Size {
     0 0.05063 1 0.35
+   }
+   Repeat 0
+   AlphaMast {
+    0 1 0.02174 0.31111 0.06522 0 1 0
+   }
+   BRateMast {
+    0 1 0.03499 1 0.06257 0.00741 1 0
    }
   }
   EmitorDef sparks {
@@ -96,6 +117,13 @@ EffectDef {
    Size {
     0 0.1 0.25 0.75 1 0
    }
+   Repeat 0
+   SizeMast {
+    0 1 1 0.33333
+   }
+   BRateMast {
+    0 1 0.29374 0 1 0
+   }
   }
   EmitorDef sparks_fire {
    ConeAngle 360 0 30
@@ -124,6 +152,10 @@ EffectDef {
    Size {
     0 0 1 1
    }
+   Repeat 0
+   BRateMast {
+    0 1 0.05779 0 1 0
+   }
   }
   EmitorDef sparks_lines {
    ConeAngle 360 0 40
@@ -150,6 +182,7 @@ EffectDef {
    Size {
     0 1 1 0
    }
+   Repeat 0
   }
  }
 }

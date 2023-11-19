@@ -49,6 +49,41 @@ enum EInventoryIconVisibility
 	HIDE_HANDS_SLOT = 4
 }
 
+//!EXCLUSIVITY values, restrict attachment combinations
+enum EAttExclusions
+{
+	OCCUPANCY_INVALID = -1,
+	//Legacy relations
+	LEGACY_EYEWEAR_HEADGEAR,
+	LEGACY_EYEWEAR_MASK,
+	LEGACY_HEADSTRAP_HEADGEAR,
+	LEGACY_HEADSTRAP_MASK,
+	LEGACY_HEADGEAR_MASK,
+	LEGACY_HEADGEAR_EYEWEWEAR,
+	LEGACY_HEADGEAR_HEADSTRAP,
+	LEGACY_MASK_HEADGEAR,
+	LEGACY_MASK_EYEWEWEAR,
+	LEGACY_MASK_HEADSTRAP,
+	//
+	EXCLUSION_HEADGEAR_HELMET_0, //full helmet
+	//EXCLUSION_HEADGEAR_HELMET_0_A, //example of another 'vector' of potential conflict, like between helmet and eyewear..otherwise the other non-helmet entities would collide through the 'EXCLUSION_HEADSTRAP_0' value.
+	EXCLUSION_HEADSTRAP_0,
+	EXCLUSION_MASK_0,
+	EXCLUSION_MASK_1,
+	EXCLUSION_MASK_2, //Mostly Gasmasks
+	EXCLUSION_MASK_3, //bandana mask special behavior
+	EXCLUSION_GLASSES_REGULAR_0,
+	EXCLUSION_GLASSES_TIGHT_0,
+	//values to solve the edge-cases with shaving action
+	SHAVING_MASK_ATT_0,
+	SHAVING_HEADGEAR_ATT_0,
+	SHAVING_EYEWEAR_ATT_0,
+}
+
+class TSelectableActionInfoArrayEx extends array<ref Param> {}
+typedef Param3<int, int, string> TSelectableActionInfo;
+typedef Param4<int, int, string, int> TSelectableActionInfoWithColor;
+
 class EntityAI extends Entity
 {
 	bool 								m_DeathSyncSent;
@@ -56,9 +91,11 @@ class EntityAI extends Entity
 	bool 								m_PreparedToDelete = false;
 	bool 								m_RefresherViable = false;
 	bool								m_WeightDirty = 1;
+	private ref map<int,ref set<int>>	m_AttachmentExclusionSlotMap; //own masks for different slots <slot,mask>. Kept on instance to better respond to various state changes
+	private ref set<int>				m_AttachmentExclusionMaskGlobal; //additional mask values and simple item values. Independent of slot-specific behavior!
+	private ref set<int> 				m_AttachmentExclusionMaskChildren; //additional mask values and simple item values
 	
 	ref DestructionEffectBase			m_DestructionBehaviourObj;
-	
 	
 	ref KillerData 						m_KillerData;
 	private ref HiddenSelectionsData	m_HiddenSelectionsData;
@@ -108,7 +145,11 @@ class EntityAI extends Entity
 	//Called when an location in this item is reserved (EntityAI item) - attachment
 	protected ref ScriptInvoker		m_OnAttachmentSetLock;
 	//Called when this item is unreserved (EntityAI item) - attachment
-	protected ref ScriptInvoker		m_OnAttachmentReleaseLock;
+	protected ref ScriptInvoker		m_OnAttachmentReleaseLock;	
+	//Called when this entity is hit
+	protected ref ScriptInvoker		m_OnHitByInvoker;	
+	//Called when this entity is killed
+	protected ref ScriptInvoker		m_OnKilledInvoker;
 	
 	void EntityAI()
 	{
@@ -133,10 +174,8 @@ class EntityAI extends Entity
 		// Refresher signalization
 		RegisterNetSyncVariableBool("m_RefresherViable");
 		
-		m_AttachmentsWithCargo			= new array<EntityAI>;
-		m_AttachmentsWithAttachments	= new array<EntityAI>;
-		//m_NewLocation 					= new InventoryLocation;
-		//m_OldLocation 					= new InventoryLocation;
+		m_AttachmentsWithCargo			= new array<EntityAI>();
+		m_AttachmentsWithAttachments	= new array<EntityAI>();
 		m_LastUpdatedTime = 0.0;
 		m_ElapsedSinceLastUpdate = 0.0;
 		
@@ -442,36 +481,15 @@ class EntityAI extends Entity
 	// End of fire distribution ^
 	
 	// ADVANCED PLACEMENT EVENTS
-	void OnPlacementStarted( Man player ) { }
-		
-	void OnHologramBeingPlaced( Man player ) { }
+	void OnPlacementStarted(Man player);		
+	void OnHologramBeingPlaced(Man player);
+	void OnPlacementComplete(Man player, vector position = "0 0 0", vector orientation = "0 0 0");
+	void OnPlacementCancelled(Man player);
 	
-	// now includes information on final object position
-	void OnPlacementComplete( Man player, vector position = "0 0 0", vector orientation = "0 0 0" ) { }
-
-	void OnPlacementCancelled( Man player )
+	bool CanBePlaced(Man player, vector position)
 	{
-		if (m_EM)
-		{
-			Man attached_to = Man.Cast( GetHierarchyParent() );
-			if (!attached_to || attached_to == player )// Check for exception with attaching a cable reel to an electric fence
-			{
-				//If cord length is 0, item powersource is most likely an attachment and should not be unplugged
-				//if (em.GetCordLength() <= 0)
-				if (m_EM.GetCordLength() <= 0)
-				{
-					//em.SwitchOff();
-					return;
-				}
-				//em.UnplugAllDevices();
-				//em.UnplugThis();
-				m_EM.UnplugAllDevices();
-				m_EM.UnplugThis();
-			}
-		}
+		return true;
 	}
-	
-	bool CanBePlaced( Man player, vector position ) { return true; }
 
 	//! Method which returns message why object can't be placed at given position
 	string CanBePlacedFailMessage( Man player, vector position )
@@ -636,6 +654,18 @@ class EntityAI extends Entity
 		return IsPreparedToDelete() || m_PendingDelete || ToDelete() || IsPendingDeletion();
 	}
 	
+	override bool CanBeActionTarget()
+	{
+		if (super.CanBeActionTarget())
+		{
+			return !IsSetForDeletion();
+		}
+		else
+		{
+			return false;
+		}
+	}
+	
 	void SetPrepareToDelete()
 	{
 		m_PreparedToDelete = true;
@@ -649,9 +679,10 @@ class EntityAI extends Entity
 	
 	void CheckForDestroy()
 	{
-		if ( IsPrepareToDelete() )
+		if (IsPrepareToDelete())
 		{
-			GetGame().GetCallQueue( CALL_CATEGORY_SYSTEM ).CallLater( TryDelete, DELETE_CHECK_DELAY, false);
+			OnBeforeTryDelete();
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(TryDelete, DELETE_CHECK_DELAY, false);
 		}
 	}
 	
@@ -662,21 +693,18 @@ class EntityAI extends Entity
 	
 	bool TryDelete()
 	{
-		if ( !IsPrepareToDelete() )
-			return false;
-		
-		if ( GetGame().HasInventoryJunctureItem(this) )
+		if (GetGame().HasInventoryJunctureItem(this))
 		{
-			GetGame().GetCallQueue( CALL_CATEGORY_SYSTEM ).CallLater( TryDelete, DELETE_CHECK_DELAY, false);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(TryDelete, DELETE_CHECK_DELAY, false);
 			return false;
 		}
 		
-		OnBeforeTryDelete();
 		DeleteSafe();
+
 		return true;
 	}
 	
-	void OnBeforeTryDelete() {}
+	void OnBeforeTryDelete();
 	
 	//! Returns root of current hierarchy (for example: if this entity is in Backpack on gnd, returns Backpack)
 	proto native EntityAI GetHierarchyRoot();
@@ -695,10 +723,13 @@ class EntityAI extends Entity
 	{
 		if (!GetHierarchyParent())
 			return lvl;
-		else
-		{
-			return GetHierarchyParent().GetHierarchyLevel(lvl+1);
-		}
+
+		return GetHierarchyParent().GetHierarchyLevel(lvl+1);
+	}
+	
+	void OnInventoryInit()
+	{
+		InitAttachmentExclusionValues();
 	}
 	
 	//! Called upon object creation
@@ -728,8 +759,6 @@ class EntityAI extends Entity
 		}
 		
 		MaxLifetimeRefreshCalc();
-		
-		//m_Initialized = true;
 	}
 	
 	//! Called right before object deleting
@@ -745,7 +774,9 @@ class EntityAI extends Entity
 	override void OnExplosionEffects(Object source, Object directHit, int componentIndex, string surface, vector pos, vector surfNormal, float energyFactor, float explosionFactor, bool isWater, string ammoType) 
 	{
 		super.OnExplosionEffects(source, directHit, componentIndex, surface, pos, surfNormal, energyFactor, explosionFactor, isWater, ammoType);
-		
+		#ifndef SERVER
+		g_Game.GetWorld().AddEnvShootingSource(pos, 1.0);
+		#endif
 		if (m_DestructionBehaviourObj && m_DestructionBehaviourObj.HasExplosionDamage())
 		{
 			m_DestructionBehaviourObj.OnExplosionEffects(source, directHit, componentIndex, surface, pos, surfNormal, energyFactor, explosionFactor, isWater, ammoType);
@@ -783,6 +814,16 @@ class EntityAI extends Entity
 			else
 				Error("EntityAI::EEItemLocationChanged - attached, but new_owner is null");
 		}
+	}
+
+	//! Called from 'IEntity.AddChild'
+	void EEParentedTo(EntityAI parent)
+	{
+	}
+
+	//! Called from 'IEntity.RemoveChild' or 'IEntity.AddChild' when hierarchy changes
+	void EEParentedFrom(EntityAI parent)
+	{
 	}
 	
 	void EEInventoryIn (Man newParentMan, EntityAI diz, EntityAI newParent)
@@ -856,6 +897,8 @@ class EntityAI extends Entity
 	//! called on server when the entity is killed
 	void EEKilled(Object killer)
 	{
+		if (m_OnKilledInvoker)
+			m_OnKilledInvoker.Invoke(this, killer);
 		//analytics
 		GetGame().GetAnalyticsServer().OnEntityKilled( killer, this );
 		
@@ -895,6 +938,8 @@ class EntityAI extends Entity
 	
 	void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
 	{
+		if (m_OnHitByInvoker)
+			m_OnHitByInvoker.Invoke(this, damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
 		#ifdef DEVELOPER
 		//Print("EEHitBy: " + this + "; damageResult:"+ damageResult.GetDamage("","") +"; damageType: "+ damageType +"; source: "+ source +"; component: "+ component +"; dmgZone: "+ dmgZone +"; ammo: "+ ammo +"; modelPos: "+ modelPos);
 		#endif
@@ -909,6 +954,8 @@ class EntityAI extends Entity
 	// !Called on PARENT when a child is attached to it.
 	void EEItemAttached(EntityAI item, string slot_name)
 	{
+		int slotId = InventorySlots.GetSlotIdFromString(slot_name);
+		PropagateExclusionValueRecursive(item.GetAttachmentExclusionMaskAll(slotId),slotId); //Performed from parent to avoid event order issues on swap
 		SetWeightDirty();
 
 		if ( m_ComponentsBank != NULL )
@@ -942,6 +989,8 @@ class EntityAI extends Entity
 	// !Called on PARENT when a child is detached from it.
 	void EEItemDetached(EntityAI item, string slot_name)
 	{
+		int slotId = InventorySlots.GetSlotIdFromString(slot_name);
+		ClearExclusionValueRecursive(item.GetAttachmentExclusionMaskAll(slotId),slotId); //Performed from parent to avoid event order issues on swap
 		SetWeightDirty();
 		
 		if ( m_ComponentsBank != NULL )
@@ -1074,6 +1123,20 @@ class EntityAI extends Entity
 		return m_OnAttachmentReleaseLock;
 	}
 	
+	ScriptInvoker GetOnHitByInvoker()
+	{
+		if ( !m_OnHitByInvoker )
+			m_OnHitByInvoker = new ScriptInvoker;
+		return m_OnHitByInvoker;
+	}
+	
+	ScriptInvoker GetOnKilledInvoker()
+	{
+		if ( !m_OnKilledInvoker )
+			m_OnKilledInvoker = new ScriptInvoker;
+		return m_OnKilledInvoker;
+	}
+	
 	
 	//! Called when this item enters cargo of some container
 	void OnMovedInsideCargo(EntityAI container)
@@ -1140,17 +1203,8 @@ class EntityAI extends Entity
 	//! Called when an item fails to get loaded into the inventory of an entity and gets dropped
 	void OnBinLoadItemsDropped()
 	{
-		if ( GetHierarchyRootPlayer() )
-		{
-			//GetGame().RPCSingleParam(GetHierarchyRootPlayer(), ERPCs.RPC_WARNING_ITEMDROP, null, true, GetHierarchyRootPlayer().GetIdentity());
+		if (GetHierarchyRootPlayer())
 			GetHierarchyRootPlayer().SetProcessUIWarning(true);
-		}
-	}
-
-	//! Checks if this instance is of type DayZCreature
-	bool IsDayZCreature()
-	{
-		return false;
 	}
 	
 	//! Sets all animation values to 1, making them INVISIBLE if they are configured in models.cfg in such way. These selections must also be defined in the entity's config class in 'AnimationSources'. 
@@ -1197,7 +1251,23 @@ class EntityAI extends Entity
 	 **/
 	bool CanReceiveAttachment (EntityAI attachment, int slotId)
 	{
-		return true;
+		//generic occupancy check
+		EntityAI currentAtt = GetInventory().FindAttachment(slotId);
+		bool hasInternalConflict = attachment.HasInternalExclusionConflicts(slotId);
+		if (currentAtt) //probably a swap or same-type swap
+		{
+			set<int> diff = attachment.GetAttachmentExclusionMaskAll(slotId);
+			diff.RemoveItems(currentAtt.GetAttachmentExclusionMaskAll(slotId));
+			if (diff.Count() == 0)
+			{
+				return !hasInternalConflict;
+			}
+			else
+			{
+				return !hasInternalConflict && !IsExclusionFlagPresentRecursive(diff,slotId);
+			}
+		}
+		return !hasInternalConflict && !IsExclusionFlagPresentRecursive(attachment.GetAttachmentExclusionMaskAll(slotId),slotId);
 	}
 	
 	/**@fn		CanLoadAsAttachment
@@ -1213,7 +1283,7 @@ class EntityAI extends Entity
 
 	/**@fn		CanPutAsAttachment
 	 * @brief	calls this->CanPutAsAttachment(parent)
-	 * @param[in] child	\p	item to be put as attachment of a parent
+	 * @param[in] parent	\p	target entity this is trying to attach to
 	 * @return	true if action allowed
 	 *
 	 * @note: engine code is scriptConditionExecute(this, parent, "CanPutAsAttachment")
@@ -1238,7 +1308,7 @@ class EntityAI extends Entity
 	{
 		if( attachment && attachment.GetInventory() && GetInventory() )
 		{
-			InventoryLocation il = new InventoryLocation;
+			InventoryLocation il = new InventoryLocation();
 			attachment.GetInventory().GetCurrentInventoryLocation( il );
 			if( il.IsValid() )
 			{
@@ -1480,7 +1550,7 @@ class EntityAI extends Entity
 	 **/		
 	bool CanDisplayCargo()
 	{
-		return true;
+		return GetInventory().GetCargo() != null;
 	}
 	
 	/**@fn		CanAssignToQuickbar
@@ -1508,10 +1578,18 @@ class EntityAI extends Entity
 	}	
 
 	// !Called on CHILD when it's attached to parent.
-	void OnWasAttached( EntityAI parent, int slot_id ) { }
-		
+	void OnWasAttached( EntityAI parent, int slot_id );
+	
 	// !Called on CHILD when it's detached from parent.
-	void OnWasDetached( EntityAI parent, int slot_id ) { }
+	void OnWasDetached( EntityAI parent, int slot_id )
+	{
+		if (!IsFlagSet(EntityFlags.VISIBLE))
+		{
+			SetInvisible(false);
+			OnInvisibleSet(false);
+			SetInvisibleRecursive(false,parent);
+		}
+	}
 	
 	void OnCargoChanged() { }
 	
@@ -1520,13 +1598,13 @@ class EntityAI extends Entity
 		return false;
 	}
 	
-	proto native GameInventory GetInventory ();
-	proto native void CreateAndInitInventory ();
-	proto native void DestroyInventory ();
+	proto native GameInventory GetInventory();
+	proto native void CreateAndInitInventory();
+	proto native void DestroyInventory();
 		
 	int GetSlotsCountCorrect()
 	{
-		if( GetInventory() )
+		if (GetInventory())
 			return GetInventory().GetAttachmentSlotsCount();
 		else
 			return -1;
@@ -1551,7 +1629,7 @@ class EntityAI extends Entity
 		EntityAI parent = GetHierarchyParent();
 		if ( parent )
 		{
-			InventoryLocation inventory_location = new InventoryLocation;
+			InventoryLocation inventory_location = new InventoryLocation();
 			GetInventory().GetCurrentInventoryLocation( inventory_location );
 			
 			return parent.GetInventory().GetSlotLock( inventory_location.GetSlot() );
@@ -1729,7 +1807,7 @@ class EntityAI extends Entity
 	*/
 	bool PredictiveTakeEntityAsAttachment(notnull EntityAI item)
 	{
-		if ( GetGame().IsMultiplayer() )
+		if (GetGame().IsMultiplayer())
 			return GetInventory().TakeEntityAsAttachment(InventoryMode.JUNCTURE, item);
 		else
 			return GetInventory().TakeEntityAsAttachment(InventoryMode.PREDICTIVE, item);
@@ -1743,9 +1821,20 @@ class EntityAI extends Entity
 		return GetInventory().TakeEntityAsAttachment(InventoryMode.SERVER, item);
 	}
 
-	bool PredictiveDropEntity (notnull EntityAI item) { return false; }
-	bool LocalDropEntity (notnull EntityAI item) { return false; }
-	bool ServerDropEntity (notnull EntityAI item) { return false; }
+	bool PredictiveDropEntity(notnull EntityAI item)
+	{
+		return false;
+	}
+	
+	bool LocalDropEntity(notnull EntityAI item)
+	{
+		return false;
+	}
+	
+	bool ServerDropEntity(notnull EntityAI item)
+	{
+		return false;
+	}
 
 	/**
 	\brief Get attached entity by type
@@ -1777,13 +1866,16 @@ class EntityAI extends Entity
 	/**
 	\brief Returns if item can be dropped out from this entity
 	*/
-	bool CanDropEntity(notnull EntityAI item) { return true; }
+	bool CanDropEntity(notnull EntityAI item)
+	{
+		return true;
+	}
 
 	/**
 	 **/
 	EntityAI SpawnEntityOnGroundPos(string object_name, vector pos)
 	{
-		InventoryLocation il = new InventoryLocation;
+		InventoryLocation il = new InventoryLocation();
 		vector mat[4];
 		Math3D.MatrixIdentity4(mat);
 		mat[3] = pos;
@@ -1794,7 +1886,7 @@ class EntityAI extends Entity
 	 **/
 	EntityAI SpawnEntityOnGround(string object_name, vector mat[4])
 	{
-		InventoryLocation il = new InventoryLocation;
+		InventoryLocation il = new InventoryLocation();
 		il.SetGround(NULL, mat);
 		return SpawnEntity(object_name, il,ECE_PLACE_ON_SURFACE,RF_DEFAULT);
 	}
@@ -1808,9 +1900,9 @@ class EntityAI extends Entity
 	
 	// Forward declarations to allow lower modules to access properties that are modified from higher modules
 	// These are mainly used within the ItemBase
-	void SetWet(float value, bool allow_client = false) {};
-	void AddWet(float value) {};
-	void SetWetMax() {};
+	void SetWet(float value, bool allow_client = false);
+	void AddWet(float value);
+	void SetWetMax();
 
 	float GetWet()
 	{
@@ -1875,6 +1967,8 @@ class EntityAI extends Entity
 	{
 		return 0;
 	}
+	
+	void SetQuantityToMinimum();
 	
 	int GetTargetQuantityMax(int attSlotID = -1)
 	{
@@ -2005,6 +2099,14 @@ class EntityAI extends Entity
 	 **/	
 	proto native void RegisterNetSyncVariableFloat(string variableName, float minValue = 0, float maxValue = 0, int precision = 1);
 	
+	/**
+	 * @fn		RegisterNetSyncVariableObject
+	 * @brief	registers object variable synchronized over network, only synchronizes if network id is assigned. Doesn't handle object despawn on client
+	 *
+	 * @param[in]	variableName	\p		which variable should be synchronized
+	 **/	
+	proto native void RegisterNetSyncVariableObject(string variableName);
+	
 	proto native void UpdateNetSyncVariableInt(string variableName, float minValue = 0, float maxValue = 0);
 	proto native void UpdateNetSyncVariableFloat(string variableName, float minValue = 0, float maxValue = 0, int precision = 1);
 
@@ -2016,8 +2118,10 @@ class EntityAI extends Entity
 	
 	//! Change texture in hiddenSelections
 	proto native void SetObjectTexture(int index, string texture_name);
+	proto native owned string GetObjectTexture(int index);
 	//! Change material in hiddenSelections
 	proto native void SetObjectMaterial(int index, string mat_name);
+	proto native owned string GetObjectMaterial(int index);
 		
 	proto native bool	IsPilotLight();
 	proto native void SetPilotLight(bool isOn);
@@ -2180,7 +2284,6 @@ class EntityAI extends Entity
 	*/
 	void OnVariablesSynchronized()
 	{
-		
 		if ( m_EM )
 		{
 			if ( GetGame().IsMultiplayer() )
@@ -2202,14 +2305,6 @@ class EntityAI extends Entity
 				
 				if (energy_source)
 				{
-					// Boris: The following prints are here to help fix DAYZ-37406. They will be removed when I find out what is causing the issue.
-					/*Print(energy_source);
-					Print(id_low);
-					Print(id_High);
-					Print(energy_source.GetCompEM());
-					Print(this);*/
-					
-
 					ComponentEnergyManager esem = energy_source.GetCompEM();
 					
 					if ( !esem )
@@ -2254,29 +2349,28 @@ class EntityAI extends Entity
 
 		text += "Weight: " + GetWeightEx() + "\n";
 		text += "Disabled: " + GetIsSimulationDisabled() + "\n";
+		#ifdef SERVER
+		if (GetEconomyProfile())
+			text += "CE Lifetime default: " + (int)GetEconomyProfile().GetLifetime() + "\n";
+		text += "CE Lifetime remaining: " + (int)GetLifetime() + "\n";
+		#endif
+		
+		ComponentEnergyManager compEM = GetCompEM();
+		if (compEM)
+		{
+			text += "Energy Source: " + Object.GetDebugName(compEM.GetEnergySource()) + "\n";
+			text += "Switched On: " + compEM.IsSwitchedOn() + "\n";
+			text += "Is Working: " + compEM.IsWorking() + "\n";
+		}
 
 		return text;
 	}
 	
 	
-	void GetDebugButtonNames(out string button1, out string button2, out string button3, out string button4)
-	{/*
-		button1 = "DebugButton1";
-		button2 = "DebugButton2";
-		button3 = "DebugButton3";
-		button4 = "DebugButton4";
-	*/
-	}
+	void GetDebugButtonNames(out string button1, out string button2, out string button3, out string button4){}//DEPRICATED, USE GetDebugActions / OnAction
+	void OnDebugButtonPressClient(int button_index){}//DEPRICATED, USE GetDebugActions / OnAction
+	void OnDebugButtonPressServer(int button_index){}//DEPRICATED, USE GetDebugActions / OnAction
 	
-	void OnDebugButtonPressClient(int button_index)
-	{
-		// you can react here to debug button press, buttons are indexed starting at 1 and up
-	}
-	
-	void OnDebugButtonPressServer(int button_index)
-	{
-		// you can react here to debug button press, buttons are indexed starting at 1 and up
-	}
 	
 	Shape DebugBBoxDraw()
 	{
@@ -2341,6 +2435,15 @@ class EntityAI extends Entity
 	proto native void SetLifetimeMax( float fLifeTime );
 	//! Get max economy lifetime per instance - default is from DB (seconds)
 	proto native float GetLifetimeMax();
+
+	//! Reset economy lifetime to default across entity hierarchy all the way to the topmost entity
+	void IncreaseLifetimeUp()
+	{
+		IncreaseLifetime();
+		if (GetHierarchyParent())
+			GetHierarchyParent().IncreaseLifetimeUp();
+	}	
+
 
 	// BODY STAGING
 	//! Use this to access Body Staging component on dead character. Returns NULL if the given object lacks such component.
@@ -2407,6 +2510,7 @@ class EntityAI extends Entity
 
 	//! Energy manager event: Called when energy was added on this device. ALWAYS CALL super.OnEnergyAdded() !!!
 	void OnEnergyAdded() {}
+	///@} energy manager
 	
 	override void OnRPC(PlayerIdentity sender, int rpc_type, ParamsReadContext ctx)
 	{
@@ -2441,6 +2545,8 @@ class EntityAI extends Entity
 	#ifdef DIAG_DEVELOPER
 	void FixEntity()
 	{
+		if (!(GetGame().IsServer()))
+			return;
 		SetFullHealth();
 		
 		if (GetInventory())
@@ -2586,6 +2692,75 @@ class EntityAI extends Entity
 	
 	void UpdateWeight(WeightUpdateType updateType = WeightUpdateType.FULL, float weightAdjustment = 0);
 	
+	float GetSingleInventoryItemWeightEx(){}
+
+	void GetDebugActions(out TSelectableActionInfoArrayEx outputList)
+	{
+		//fix entity
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.FIX_ENTITY, "Fix Entity", FadeColors.LIGHT_GREY));
+	
+		//weight
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.GET_TOTAL_WEIGHT, "Print Weight", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.GET_TOTAL_WEIGHT_RECALC, "Print Weight Verbose", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.GET_PLAYER_WEIGHT, "Print Player Weight", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.GET_PLAYER_WEIGHT_RECALC, "Print Player Weight Verbose", FadeColors.LIGHT_GREY));
+	}
+	bool OnAction(int action_id, Man player, ParamsReadContext ctx)
+	{
+		if (action_id == EActions.FIX_ENTITY)
+		{
+			#ifdef DIAG_DEVELOPER
+			FixEntity();
+			#endif
+		}
+		else if (action_id == EActions.GET_TOTAL_WEIGHT) //Prints total weight of item + its contents
+		{
+			WeightDebug.ClearWeightDebug();
+			#ifndef SERVER
+			Debug.Log("======================== "+  GetType() +" =================================");
+			#endif
+			Debug.Log("Weight:" + GetWeightEx().ToString());
+			Debug.Log("Weight excluding cargo and attachments:" + GetSingleInventoryItemWeightEx());
+			Debug.Log("----------------------------------------------------------------------------------------------");
+		}
+		else if (action_id == EActions.GET_TOTAL_WEIGHT_RECALC) //Prints total weight of item + its contents
+		{
+			WeightDebug.ClearWeightDebug();
+			WeightDebug.SetVerbosityFlags(WeightDebugType.RECALC_FORCED);
+			#ifndef SERVER
+			Debug.Log("======================== "+  GetType() +" RECALC ===========================");
+			#endif
+			Debug.Log("Weight:" + GetWeightEx(true).ToString());
+			Debug.Log("Weight excluding cargo and attachments:" + GetSingleInventoryItemWeightEx());
+			WeightDebug.PrintAll(this);
+			Debug.Log("----------------------------------------------------------------------------------------------");
+			WeightDebug.SetVerbosityFlags(0);
+		}
+		else if (action_id == EActions.GET_PLAYER_WEIGHT) //Prints total weight of item + its contents
+		{
+			WeightDebug.ClearWeightDebug();
+			#ifndef SERVER
+			Debug.Log("======================== PLAYER: "+player+" ===========================");
+			#endif
+			Debug.Log("New overall weight Player:"+player.GetWeightEx().ToString());
+
+			Debug.Log("----------------------------------------------------------------------------------------------");
+		}
+		else if (action_id == EActions.GET_PLAYER_WEIGHT_RECALC) //Prints total weight of item + its contents
+		{
+			WeightDebug.ClearWeightDebug();
+			WeightDebug.SetVerbosityFlags(WeightDebugType.RECALC_FORCED);
+			#ifndef SERVER
+			Debug.Log("======================== PLAYER RECALC: "+player+" ===========================");
+			#endif
+			Debug.Log("New overall weight Player:"+player.GetWeightEx(true).ToString());
+			WeightDebug.PrintAll(player);
+			Debug.Log("----------------------------------------------------------------------------------------------");
+			WeightDebug.SetVerbosityFlags(0);
+		}
+		return false;
+	}
+
 	///@{ view index
 	//! Item view index is used to setup which camera will be used in item view widget in inventory.
 	//! With this index you can setup various camera angles for different item states (e.g. fireplace, weapons).
@@ -2608,7 +2783,7 @@ class EntityAI extends Entity
 		if ( MemoryPointExists( "invView2" ) )
 		{
 			#ifdef PLATFORM_WINDOWS
-			InventoryLocation il = new InventoryLocation;
+			InventoryLocation il = new InventoryLocation();
 			GetInventory().GetCurrentInventoryLocation( il );
 			InventoryLocationType type = il.GetType();
 			switch ( type )
@@ -2879,6 +3054,7 @@ class EntityAI extends Entity
 				}
 				
 				item.SetInvisible(invisible);
+				item.OnInvisibleSet(invisible);
 			}
 		}
 	}
@@ -2995,21 +3171,477 @@ class EntityAI extends Entity
 	}
 
 	//! Remotely controlled devices helpers
+	RemotelyActivatedItemBehaviour GetRemotelyActivatedItemBehaviour();
+
 	void PairRemote(notnull EntityAI trigger);
+
 	void UnpairRemote();
+
 	EntityAI GetPairDevice();
+
+	void SetPersistentPairID(int id)
+	{
+		RemotelyActivatedItemBehaviour raib = GetRemotelyActivatedItemBehaviour();
+		if (raib)
+		{
+			raib.SetPersistentPairID(id);
+		}
+	}
 
 	//! Turnable Valve behaviour
 	bool HasTurnableValveBehavior();
 	bool IsValveTurnable(int pValveIndex);
 	int GetTurnableValveIndex(int pComponentIndex);
 	void ExecuteActionsConnectedToValve(int pValveIndex);
-	
-	//Returns a type of finisher attack based on internal logic (in childern's overrides)
-	/*int DetermineFinisherHitType(EntityAI source,int component)
+
+//////////////////////////////////
+// attachment exclusion section //
+//////////////////////////////////
+	private void InitAttachmentExclusionValues()
 	{
-		return -1;
-	}*/
+		m_AttachmentExclusionSlotMap = new map<int,ref set<int>>();
+		m_AttachmentExclusionMaskGlobal = new set<int>;
+		m_AttachmentExclusionMaskChildren = new set<int>();
+	
+		int count = GetInventory().GetSlotIdCount();
+		//no sense in performing inits for something that cannot be attached anywhere (hand/lefthand and some other 'special' slots are the reason for creating 'new' sets above)
+		if (count == 0)
+			return;
+		
+		InitInherentSlotExclusionMap();
+		InitGlobalExclusionValues();
+		InitLegacyConfigExclusionValues();
+	}
+	
+	//! map stored on instance to better respond to various state changes
+	private void InitInherentSlotExclusionMap()
+	{
+		int count = GetInventory().GetSlotIdCount();
+		//starting with the INVALID slot, so it is always in the map of attachable items
+		SetAttachmentExclusionMaskSlot(InventorySlots.INVALID,GetAttachmentExclusionInitSlotValue(InventorySlots.INVALID));
+		
+		int slotId;
+		for (int i = 0; i < count; i++) 
+		{
+			slotId = GetInventory().GetSlotId(i);
+			SetAttachmentExclusionMaskSlot(slotId,GetAttachmentExclusionInitSlotValue(slotId));
+		}
+	}
+	
+	//! override this to modify slot behavior for specific items, or just set 'm_AttachmentExclusionMaskGlobal' value for simple items
+	protected set<int> GetAttachmentExclusionInitSlotValue(int slotId)
+	{
+		set<int> dflt = new set<int>;
+		return dflt;
+	}
+	
+	//Initiated last, and only for items that do not have others defined already
+	protected void InitLegacyConfigExclusionValues()
+	{
+		bool performLegacyInit = InitLegacyExclusionCheck();
+		
+		//adding implicit slot info AFTER the check is performed
+		InitLegacySlotExclusionValuesImplicit();
+		
+		if (performLegacyInit)
+			InitLegacySlotExclusionValuesDerived();
+	}
+
+	//returns 'false' if the script initialization 
+	protected bool InitLegacyExclusionCheck()
+	{
+		//first check the globals
+		if (m_AttachmentExclusionMaskGlobal.Count() > 0)
+			return false;
+		
+		//now the map
+		int count = m_AttachmentExclusionSlotMap.Count();
+		if (count > 1) //more than InventorySlots.INVALID
+		{
+			for (int i = 0; i < count; i++)
+			{
+				int countSet = m_AttachmentExclusionSlotMap.GetElement(i).Count();
+				if (countSet > 0) //SOMETHING is defined
+				{
+					return false;
+				}
+			}
+		}
+		
+		return true;
+	}
+
+	/**@fn		InitLegacySlotExclusionValuesImplicit
+	 * @brief	adding base one-directional relations between headgear, masks, eyewear, and headstraps (exception)
+	 *
+	 * @note: 'InitLegacyConfigExclusionValues' adds them the other way if the item does not have any script-side exclusions AND has some legacy config parameter.
+	**/
+	protected void InitLegacySlotExclusionValuesImplicit()
+	{
+		int slotId;
+		int slotCount = GetInventory().GetSlotIdCount();
+		for (int i = 0; i < slotCount; i++) 
+		{
+			slotId = GetInventory().GetSlotId(i);
+			set<int> tmp;
+			switch (slotId)
+			{
+				case InventorySlots.HEADGEAR:
+				{
+					tmp = new set<int>;
+					tmp.Copy(GetAttachmentExclusionInitSlotValue(slotId));
+					tmp.Insert(EAttExclusions.LEGACY_HEADGEAR_MASK);
+					tmp.Insert(EAttExclusions.LEGACY_HEADGEAR_HEADSTRAP);
+					tmp.Insert(EAttExclusions.LEGACY_HEADGEAR_EYEWEWEAR);
+					SetAttachmentExclusionMaskSlot(slotId,tmp);
+					break;
+				}
+				
+				case InventorySlots.MASK:
+				{
+					tmp = new set<int>;
+					tmp.Copy(GetAttachmentExclusionInitSlotValue(slotId));
+					tmp.Insert(EAttExclusions.LEGACY_MASK_HEADGEAR);
+					tmp.Insert(EAttExclusions.LEGACY_MASK_HEADSTRAP);
+					tmp.Insert(EAttExclusions.LEGACY_MASK_EYEWEWEAR);
+					SetAttachmentExclusionMaskSlot(slotId,tmp);
+					break;
+				}
+				
+				case InventorySlots.EYEWEAR:
+				{
+					tmp = new set<int>;
+					tmp.Copy(GetAttachmentExclusionInitSlotValue(slotId));
+					if (ConfigGetBool("isStrap"))
+					{
+						tmp.Insert(EAttExclusions.LEGACY_HEADSTRAP_HEADGEAR);
+						tmp.Insert(EAttExclusions.LEGACY_HEADSTRAP_MASK);
+					}
+					else
+					{
+						tmp.Insert(EAttExclusions.LEGACY_EYEWEAR_HEADGEAR);
+						tmp.Insert(EAttExclusions.LEGACY_EYEWEAR_MASK);
+					}
+					SetAttachmentExclusionMaskSlot(slotId,tmp);
+					break;
+				}
+			}
+		}
+	}
+	
+	protected void InitLegacySlotExclusionValuesDerived()
+	{
+		int slotId;
+		int slotCount = GetInventory().GetSlotIdCount();
+		for (int i = 0; i < slotCount; i++) 
+		{
+			slotId = GetInventory().GetSlotId(i);
+			set<int> tmp;
+			switch (slotId)
+			{
+				case InventorySlots.HEADGEAR:
+				{
+					tmp = new set<int>;
+					tmp.Copy(GetAttachmentExclusionMaskSlot(slotId));
+					if (ConfigGetBool("noNVStrap"))
+					{
+						tmp.Insert(EAttExclusions.LEGACY_HEADSTRAP_HEADGEAR);
+					}
+					if (ConfigGetBool("noMask"))
+					{
+						tmp.Insert(EAttExclusions.LEGACY_MASK_HEADGEAR);
+					}
+					if (ConfigGetBool("noEyewear"))
+					{
+						tmp.Insert(EAttExclusions.LEGACY_EYEWEAR_HEADGEAR);
+					}
+					SetAttachmentExclusionMaskSlot(slotId,tmp);
+					break;
+				}
+				
+				case InventorySlots.MASK:
+				{
+					tmp = new set<int>;
+					tmp.Copy(GetAttachmentExclusionMaskSlot(slotId));
+					if (ConfigGetBool("noNVStrap"))
+					{
+						tmp.Insert(EAttExclusions.LEGACY_HEADSTRAP_MASK);
+					}
+					if (ConfigGetBool("noHelmet"))
+					{
+						tmp.Insert(EAttExclusions.LEGACY_HEADGEAR_MASK);
+					}
+					if (ConfigGetBool("noEyewear"))
+					{
+						tmp.Insert(EAttExclusions.LEGACY_EYEWEAR_MASK);
+					}
+					SetAttachmentExclusionMaskSlot(slotId,tmp);
+					break;
+				}
+				
+				case InventorySlots.EYEWEAR:
+				{
+					tmp = new set<int>;
+					tmp.Copy(GetAttachmentExclusionMaskSlot(slotId));
+					if (ConfigGetBool("isStrap"))
+					{
+						if (ConfigGetBool("noHelmet"))
+						{
+							tmp.Insert(EAttExclusions.LEGACY_HEADGEAR_HEADSTRAP);
+						}
+						if (ConfigGetBool("noMask"))
+						{
+							tmp.Insert(EAttExclusions.LEGACY_MASK_HEADSTRAP);
+						}
+					}
+					else
+					{
+						if (ConfigGetBool("noHelmet"))
+						{
+							tmp.Insert(EAttExclusions.LEGACY_HEADGEAR_EYEWEWEAR);
+						}
+						if (ConfigGetBool("noMask"))
+						{
+							tmp.Insert(EAttExclusions.LEGACY_MASK_EYEWEWEAR);
+						}
+					}
+					SetAttachmentExclusionMaskSlot(slotId,tmp);
+					break;
+				}
+			}
+		}
+	}
+
+	//! override to init part of the mask, independent of slot-specific behavior
+	protected void InitGlobalExclusionValues();
+	
+	//! to help with item staging exclusions
+	protected void AddSingleExclusionValueGlobal(EAttExclusions value)
+	{
+		if (m_AttachmentExclusionMaskGlobal.Find(value) == -1)
+			m_AttachmentExclusionMaskGlobal.Insert(value);
+	}
+	
+	//! to help with item staging exclusions
+	protected void ClearSingleExclusionValueGlobal(EAttExclusions value)
+	{
+		int idx = m_AttachmentExclusionMaskGlobal.Find(value);
+		if (idx != -1)
+			m_AttachmentExclusionMaskGlobal.Remove(idx);
+	}
+	
+	protected void SetAttachmentExclusionMaskGlobal(set<int> values)
+	{
+		m_AttachmentExclusionMaskGlobal.Clear();
+		m_AttachmentExclusionMaskGlobal.Copy(values);
+	}
+	
+	//! sets values for specific slot
+	protected void SetAttachmentExclusionMaskSlot(int slotId, set<int> values)
+	{
+		if (m_AttachmentExclusionSlotMap)
+		{
+			m_AttachmentExclusionSlotMap.Set(slotId,values);
+		}
+		else
+			ErrorEx("m_AttachmentExclusionSlotMap not available! Fill the 'inventorySlot[]' in the " + this + " config file.");
+	}
+	
+	private void PropagateExclusionValueRecursive(set<int> values, int slotId)
+	{
+		if (values && values.Count() != 0)
+		{
+			set<int> passThis;
+			InventoryLocation lcn = new InventoryLocation();
+			GetInventory().GetCurrentInventoryLocation(lcn);
+			if (CheckExclusionAccessPropagation(lcn.GetSlot(), slotId, values, passThis))
+			{
+				m_AttachmentExclusionMaskChildren.InsertSet(passThis);
+				EntityAI parent = GetHierarchyParent();
+				if (parent)
+					parent.PropagateExclusionValueRecursive(passThis,lcn.GetSlot());
+			}
+		}
+	}
+	
+	private void ClearExclusionValueRecursive(set<int> values, int slotId)
+	{
+		if (values && values.Count() != 0)
+		{
+			set<int> passThis;
+			InventoryLocation lcn = new InventoryLocation();
+			GetInventory().GetCurrentInventoryLocation(lcn);
+			if (CheckExclusionAccessPropagation(lcn.GetSlot(), slotId, values, passThis))
+			{
+				int count = passThis.Count();
+				for (int i = 0; i < count; i++)
+				{
+					m_AttachmentExclusionMaskChildren.RemoveItem(passThis[i]);
+				}
+				EntityAI parent = GetHierarchyParent();
+				if (parent)
+					parent.ClearExclusionValueRecursive(passThis,lcn.GetSlot());
+			}
+		}
+	}
+	
+	//! Slot-specific, children (attachments), and additional (state etc.) masks combined
+	set<int> GetAttachmentExclusionMaskAll(int slotId)
+	{
+		set<int> values = new set<int>();
+		set<int> slotValues = GetAttachmentExclusionMaskSlot(slotId);
+		if (slotValues)
+			values.InsertSet(slotValues);
+		values.InsertSet(m_AttachmentExclusionMaskGlobal);
+		values.InsertSet(m_AttachmentExclusionMaskChildren);
+		
+		return values;
+	}
+	
+	//! Specific slot behavior
+	set<int> GetAttachmentExclusionMaskSlot(int slotId)
+	{
+		return m_AttachmentExclusionSlotMap.Get(slotId);
+	}
+	
+	//! Global mask value, independent of slot-specific behavior!
+	set<int> GetAttachmentExclusionMaskGlobal()
+	{
+		return m_AttachmentExclusionMaskGlobal;
+	}
+	
+	//! Mask value coming from the item's attachments
+	set<int> GetAttachmentExclusionMaskChildren()
+	{
+		return m_AttachmentExclusionMaskChildren;
+	}
+	
+	//! checks if any attachment or item state would interfere with this being attached into a different slot (Headgear -> Mask)
+	private bool HasInternalExclusionConflicts(int targetSlot)
+	{
+		set<int> targetSlotValues = GetAttachmentExclusionMaskSlot(targetSlot);
+		if (targetSlotValues) //can be null, if so, no conflict
+		{
+			set<int> additionalValues = new set<int>(); //NOT slot values
+			additionalValues.InsertSet(GetAttachmentExclusionMaskGlobal());
+			additionalValues.InsertSet(GetAttachmentExclusionMaskChildren());
+			
+			int countTarget = targetSlotValues.Count();
+			for (int i = 0; i < countTarget; i++)
+			{
+				if (additionalValues.Find(targetSlotValues[i]) != -1)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	//! checks 'this' if the incoming flag is present for the current state (slot behavior and others)
+	protected bool IsExclusionFlagPresent(set<int> values)
+	{
+		int slotId;
+		string slotName;
+		GetInventory().GetCurrentAttachmentSlotInfo(slotId,slotName); //if currently attached, treat it accordingly
+		
+		set<int> currentSlotValuesAll = GetAttachmentExclusionMaskAll(slotId);
+		int count = values.Count();
+		for (int i = 0; i < count; i++)
+		{
+			if (currentSlotValuesAll.Find(values[i]) != -1)
+				return true;
+		}
+		return false;
+	}
+	
+	//! Gets flag from what is effectively an owner
+	protected bool IsExclusionFlagPresentRecursive(set<int> values, int targetSlot)
+	{
+		if (values && values.Count() != 0)
+		{
+			InventoryLocation lcn = new InventoryLocation();
+			GetInventory().GetCurrentInventoryLocation(lcn);
+			EntityAI parent = GetHierarchyParent();
+			set<int> passThis;
+			if (CheckExclusionAccessCondition(lcn.GetSlot(),targetSlot, values, passThis))
+			{
+				if (parent && parent != this) //we reached root if false
+				{
+					return parent.IsExclusionFlagPresentRecursive(passThis,lcn.GetSlot());
+				}
+			}
+			return IsExclusionFlagPresent(passThis);
+		}
+		
+		return false;
+	}
+	
+	//!
+	protected bool CheckExclusionAccessCondition(int occupiedSlot, int targetSlot, set<int> value, inout set<int> adjustedValue)
+	{
+		bool occupiedException = occupiedSlot == InventorySlots.HANDS || occupiedSlot == InventorySlots.SHOULDER || occupiedSlot == InventorySlots.MELEE || occupiedSlot == InventorySlots.LEFTHAND;
+		bool targetException = targetSlot == InventorySlots.HANDS || targetSlot == InventorySlots.SHOULDER || targetSlot == InventorySlots.MELEE || targetSlot == InventorySlots.LEFTHAND;
+		
+		if (occupiedException)
+		{
+			adjustedValue = value;
+			return false;
+		}
+		
+		if (targetException)
+		{
+			adjustedValue = null;
+			return false;
+		}
+		
+		AdjustExclusionAccessCondition(occupiedSlot,targetSlot,value,adjustedValue);
+		return adjustedValue.Count() != 0;
+	}
+	
+	//!if we want to filter 
+	protected void AdjustExclusionAccessCondition(int occupiedSlot, int testedSlot, set<int> value, inout set<int> adjustedValue)
+	{
+		adjustedValue = value;
+	}
+
+	//! special propagation contition
+	protected bool CheckExclusionAccessPropagation(int occupiedSlot, int targetSlot, set<int> value, inout set<int> adjustedValue)
+	{
+		bool occupiedException = occupiedSlot == InventorySlots.HANDS || occupiedSlot == InventorySlots.SHOULDER || occupiedSlot == InventorySlots.MELEE || occupiedSlot == InventorySlots.LEFTHAND;
+		bool targetException = targetSlot == InventorySlots.HANDS || targetSlot == InventorySlots.SHOULDER || targetSlot == InventorySlots.MELEE || targetSlot == InventorySlots.LEFTHAND;
+		
+		if (targetException)
+		{
+			adjustedValue = null;
+			return false;
+		}
+		
+		AdjustExclusionAccessPropagation(occupiedSlot,targetSlot,value,adjustedValue);
+		return adjustedValue.Count() != 0;
+	}
+	
+	//!if we want to filter propagation specifically; DO NOT override unless you know what you are doing.
+	protected void AdjustExclusionAccessPropagation(int occupiedSlot, int testedSlot, set<int> value, inout set<int> adjustedValue)
+	{
+		AdjustExclusionAccessCondition(occupiedSlot,testedSlot,value,adjustedValue);
+	}
+
+	bool IsManagingArrows()
+	{
+		return false;
+	}
+
+	ArrowManagerBase GetArrowManager()
+	{
+		return null;
+	}
+
+	void SetFromProjectile(ProjectileStoppedInfo info)
+	{
+	}
+
+	void ClearInventory();
 };
 
 #ifdef DEVELOPER

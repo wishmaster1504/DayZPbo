@@ -23,7 +23,7 @@ class TripwireTrap : TrapBase
 	void TripwireTrap()
 	{
 		m_DamagePlayers = 0; 			//How much damage player gets when caught
-		m_InitWaitTime = 0; 			//After this time after deployment, the trap is activated
+		m_InitWaitTime = 0.0; 			//After this time after deployment, the trap is activated
 		m_DefectRate = 15;
 		m_NeedActivation = false;
 		m_AnimationPhaseGrounded = "inventory";
@@ -75,6 +75,8 @@ class TripwireTrap : TrapBase
 		m_TrapTrigger.SetOrientation(GetOrientation());
 		m_TrapTrigger.SetExtents(mins, maxs);
 		m_TrapTrigger.SetParentObject(this);
+		
+		GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Call(DeferredEnableTrigger);
 	}
 	
 	override void OnSteppedOn(EntityAI victim)
@@ -107,11 +109,12 @@ class TripwireTrap : TrapBase
 	override void OnItemLocationChanged(EntityAI old_owner, EntityAI new_owner)
 	{
 		super.OnItemLocationChanged(old_owner, new_owner);
-		
-		PlayerBase player = PlayerBase.Cast( new_owner );
+
+		PlayerBase player = PlayerBase.Cast(new_owner);
 		if (player)
 		{
 			StartDeactivate(player);
+			return;
 		}
 	}
 	
@@ -129,6 +132,28 @@ class TripwireTrap : TrapBase
 			}
 			
 			m_ResultOfAdvancedPlacing = false;
+		}
+		
+		if (oldLoc.GetType() == InventoryLocationType.GROUND && newLoc.GetType() == InventoryLocationType.CARGO)
+		{
+			SetInactive();
+			DeleteTrigger();
+			SetState(FOLDED);
+			RefreshState();
+		}
+	}
+	
+	override void EEHealthLevelChanged(int oldLevel, int newLevel, string zone)
+	{
+		super.EEHealthLevelChanged(oldLevel, newLevel, zone);
+
+		if (GetGame().IsServer())
+		{
+			if (newLevel == GameConstants.STATE_RUINED)
+			{
+				SetState(TRIGGERED);
+				RefreshState();
+			}
 		}
 	}
 	
@@ -322,8 +347,6 @@ class TripwireTrap : TrapBase
 	// On placement complete, set state, play sound, create trigger and synch to client
 	override void OnPlacementComplete(Man player, vector position = "0 0 0", vector orientation = "0 0 0")
 	{
-		super.OnPlacementComplete(player, position, orientation);
-		
 		SetIsPlaceSound(true);
 		if (GetGame().IsServer())
 		{
@@ -352,7 +375,7 @@ class TripwireTrap : TrapBase
 	// Tripwire cannot be taken if deployed with attachment
 	override bool IsTakeable()
 	{
-		return !IsRuined() && (GetState() != DEPLOYED || (GetInventory().AttachmentCount() == 0 && GetState() == DEPLOYED));
+		return GetState() != DEPLOYED || (GetInventory().AttachmentCount() == 0 && GetState() == DEPLOYED);
 	}
 	
 	override string GetDeploySoundset()
@@ -410,26 +433,34 @@ class TripwireTrap : TrapBase
 		SetState(DEPLOYED);
 		StartActivate(null);
 	}
-	
-	override void GetDebugButtonNames(out string button1, out string button2, out string button3, out string button4)
+
+	override void GetDebugActions(out TSelectableActionInfoArrayEx outputList)
 	{
-		button1 = "Activate";
-		button2 = "Deactivate";
-	}
-	
-	override void OnDebugButtonPressServer(int button_index)
-	{
-		switch (button_index)
-		{
-			case 1:
-				StartActivate(null);
-			break;
-			case 2:
-				SetInactive();
-			break;
-		}
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.ACTIVATE_ENTITY, "Activate", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.DEACTIVATE_ENTITY, "Deactivate", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.SEPARATOR, "___________________________", FadeColors.LIGHT_GREY));
 		
+		super.GetDebugActions(outputList);
 	}
+	
+	override bool OnAction(int action_id, Man player, ParamsReadContext ctx)
+	{
+		if (super.OnAction(action_id, player, ctx))
+			return true;
+		if (GetGame().IsServer() || !GetGame().IsMultiplayer())
+		{
+			if (action_id == EActions.ACTIVATE_ENTITY)
+			{
+				StartActivate(null);
+			}
+			else if (action_id == EActions.DEACTIVATE_ENTITY)
+			{
+				SetInactive();
+			}
+		}
+		return false;
+	}
+	
 #endif
 }
 

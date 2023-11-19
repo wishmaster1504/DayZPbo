@@ -14,7 +14,7 @@ class TrapBase extends ItemBase
 	protected const int DAMAGE_TRIGGER_MINE 		= 75;
 	protected const float UPDATE_TIMER_INTERVAL 	= 0.05;
 
-	int   m_InitWaitTime; 			//After this time after deployment, the trap is activated
+	float   m_InitWaitTime; 		//After this time after deployment, the trap is activated
 	bool m_NeedActivation;			//If activation of trap is needed
 	float m_DefectRate; 			//Added damage after trap activation
 	float m_DamagePlayers; 			//How much damage player gets when caught
@@ -44,7 +44,7 @@ class TrapBase extends ItemBase
 	protected TrapTrigger m_TrapTrigger;
 	
 	protected ref array<int> m_ClothingDmg;
-	protected ref EffectSound 	m_DeployLoopSound;	
+	protected ref EffectSound 	m_DeployLoopSound; //DEPRECATED in favor of m_DeployLoopSoundEx
 	
 	void TrapBase()
 	{
@@ -85,37 +85,32 @@ class TrapBase extends ItemBase
 	
 	void OnUpdate(EntityAI victim);
 	
+	TrapTrigger GetTrapTrigger()
+	{
+		return m_TrapTrigger;
+	}
+	
 	//! this event is called all variables are synchronized on client
     override void OnVariablesSynchronized()
     {
         super.OnVariablesSynchronized();
 		
-		if ( IsDeploySound() )
-		{
+		if (IsDeploySound())
 			PlayDeploySound();
-		}
 		
-		if ( CanPlayDeployLoopSound() )
-		{
+		if (CanPlayDeployLoopSound())
 			PlayDeployLoopSound();
-		}
 					
-		if ( m_DeployLoopSound && !CanPlayDeployLoopSound() )
-		{
+		if (m_DeployLoopSound && !CanPlayDeployLoopSound())
 			StopDeployLoopSound();
-		}
 		
-		if ( GetGame().IsMultiplayer() )
+		if (GetGame().IsMultiplayer())
 		{
-			if (m_IsActive)
-			{
+			if (m_IsActive && !m_IsInProgress)
 				SetActive();
-			}
 			
 			if (m_IsInProgress && !m_IsActive)
-			{
 				StartActivate(null);
-			}
 		}
 	}
 	
@@ -123,11 +118,10 @@ class TrapBase extends ItemBase
 	{
 		super.EEDelete(parent);
 
-		//GetGame() can be sometimes NULL when turning off server
-		if ( GetGame() && m_TrapTrigger )
+		if (GetGame() && m_TrapTrigger)
 		{
-			GetGame().ObjectDelete( m_TrapTrigger );
-			m_TrapTrigger = NULL;
+			GetGame().ObjectDelete(m_TrapTrigger);
+			m_TrapTrigger = null;
 		}
 	}
 
@@ -136,7 +130,6 @@ class TrapBase extends ItemBase
 		super.OnStoreSave(ctx);
 		
 		ctx.Write(m_IsActive);
-		
 		ctx.Write(m_IsInProgress);
 	}
 	
@@ -292,7 +285,6 @@ class TrapBase extends ItemBase
 	void RemoveFromObject(EntityAI victim)
 	{
 		OnSteppedOut(victim);
-		Synch(null);
 	}
 	
 	void OnSteppedOn(EntityAI victim)
@@ -307,12 +299,8 @@ class TrapBase extends ItemBase
 	{
 		if (GetGame().IsServer())
 		{
-			SetSynchDirty();
-
 			if (victim && !victim.GetAllowDamage())
-			{
 				return;
-			}
 
 			Param1<EntityAI> p = new Param1<EntityAI>(victim);
 			GetGame().RPCSingleParam(this, ERPCs.RPC_TRAP_VICTIM, p, true);
@@ -330,43 +318,35 @@ class TrapBase extends ItemBase
 			switch (rpc_type)
 			{
 				case ERPCs.RPC_TRAP_VICTIM:
-				
-					ref Param1<EntityAI> p_victim = new Param1<EntityAI>(NULL);
+					Param1<EntityAI> victim = new Param1<EntityAI>(null);
 					
-					if (ctx.Read(p_victim))
+					if (ctx.Read(victim))
 					{
-						if (p_victim.param1)
-						{
-							SnapOnObject(p_victim.param1);
-						}
+						if (victim.param1)
+							SnapOnObject(victim.param1);
 					}
 					
-				break;
+					break;
 				
 				case ERPCs.RPC_TRAP_DISARM:
 					OnDisarm();
-				break;
+					break;
 				
 				case SoundTypeTrap.ACTIVATING:
 			
-					ref Param1<bool> p = new Param1<bool>(false);
+					Param1<bool> p = new Param1<bool>(false);
 					
+					bool isActivating = false;
 					if (ctx.Read(p))
-					{
-						bool play = p.param1;
-					}
+						isActivating = p.param1;
 					
-					if ( play )
-					{
+					if (isActivating)
 						PlayDeployLoopSound();
-					}
 					
-					if ( !play )
-					{
+					if (!isActivating)
 						StopDeployLoopSound();
-					}
 			
-				break;
+					break;
 			}
 		}
 	}
@@ -421,34 +401,28 @@ class TrapBase extends ItemBase
 
 	void SetupTrap()
 	{ 
-		if ( GetGame().IsServer() )
+		if (GetGame().IsServer())
 		{
-			if ( GetHierarchyRootPlayer() && GetHierarchyRootPlayer().CanDropEntity( this ) )  // kvoli desyncu
-			{
-				SetupTrapPlayer( PlayerBase.Cast( GetHierarchyRootPlayer() ) );
-			}
+			if (GetHierarchyRootPlayer() && GetHierarchyRootPlayer().CanDropEntity(this))
+				SetupTrapPlayer(PlayerBase.Cast(GetHierarchyRootPlayer()));
 		}
 	}
 
 	void SetupTrapPlayer( PlayerBase player, bool set_position = true )
 	{ 
-		if ( GetGame().IsServer() )
+		if (GetGame().IsServer())
 		{
-			if ( set_position )
+			if (set_position)
 			{
-				Error("Mojmir: TODO");
-				player.LocalDropEntity( this );
+				player.LocalDropEntity(this);
 				
-				vector trapPos = ( player.GetDirection() ) * 1.5;
+				vector trapPos = player.GetDirection() * 1.5;
 				trapPos[1] = 0;
-				SetPosition( player.GetPosition() + trapPos );
+				SetPosition(player.GetPosition() + trapPos);
 			}
 					
-			if ( m_NeedActivation == false )
-			{
+			if (m_NeedActivation == false)
 				SetActive();
-			}
-			//player.MessageStatus( m_InfoSetup );
 		}
 	}
 
@@ -476,7 +450,7 @@ class TrapBase extends ItemBase
 		{
 			CreateTrigger();
 			RefreshState();
-			Synch(null);
+			SetSynchDirty();
 		}
 		
 		OnActivate();
@@ -484,24 +458,22 @@ class TrapBase extends ItemBase
 
 	void OnActivate();
 
-	void StartActivate( PlayerBase player )
+	void StartActivate(PlayerBase player)
 	{
-		if ( GetGame().IsServer() )
+		if (GetGame().IsServer())
 		{
-			m_Timer = new Timer( CALL_CATEGORY_SYSTEM );
+			m_Timer = new Timer(CALL_CATEGORY_SYSTEM);
 			HideSelection("safety_pin");
 			
-			if ( m_InitWaitTime > 0 )
+			if (m_InitWaitTime > 0)
 			{
 				m_IsInProgress = true;
-				m_Timer.Run( m_InitWaitTime, this, "SetActive" );
+				m_Timer.Run(m_InitWaitTime, this, "SetActive");
 			
-				Synch(null);
+				SetSynchDirty();
 			}
 			else
-			{
 				SetActive();
-			}
 		}
 	}
 	
@@ -513,18 +485,14 @@ class TrapBase extends ItemBase
 		
 		m_IsActive = false;
 		if (m_Timer && stop_timer)
-		{
 			m_Timer.Stop();
-		}
 		
 		if (m_AddDeactivationDefect)
-		{
 			AddDefect();
-		}
-		
+
+		SetSynchDirty();		
 		DeleteTrigger();
 		RefreshState();
-		Synch(null);
 	}
 	
 	void CreateTrigger()
@@ -536,13 +504,23 @@ class TrapBase extends ItemBase
 			m_TrapTrigger.SetOrientation(GetOrientation());
 			m_TrapTrigger.SetExtents(mins, maxs);
 			m_TrapTrigger.SetParentObject(this);
+			GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).Call(DeferredEnableTrigger);
 		}
 	}
 	
 	void DeleteTrigger()
 	{
-		GetGame().ObjectDelete(m_TrapTrigger);
-		m_TrapTrigger = null;
+		if (m_TrapTrigger)
+		{	
+			m_TrapTrigger.SetParentObject(null);
+			m_TrapTrigger.DeleteSafe();
+		}
+	}
+	
+	void DeferredEnableTrigger()
+	{
+		if (m_TrapTrigger)
+			m_TrapTrigger.SetEnabled();
 	}
 
 	override void OnItemLocationChanged(EntityAI old_owner, EntityAI new_owner) 
@@ -574,19 +552,28 @@ class TrapBase extends ItemBase
 	{
 		super.EEItemAttached(item, slot_name);
 		
-		if ( GetGame().IsServer() )
-		{
+		if (GetGame().IsServer())
 			RefreshState();
-		}
 	}	
 	
 	override void EEItemDetached(EntityAI item, string slot_name)
 	{
 		super.EEItemDetached(item, slot_name);
 		
-		if ( GetGame().IsServer() )
-		{
+		if (GetGame().IsServer())
 			RefreshState();
+	}
+	
+	override void OnPlacementComplete(Man player, vector position = "0 0 0", vector orientation = "0 0 0")
+	{
+		super.OnPlacementComplete(player, position, orientation);
+		
+		if (GetGame().IsServer())
+		{
+			SetOrientation(orientation);
+			SetPosition(position);
+			PlaceOnSurface();
+			SetSynchDirty();
 		}
 	}
 	
@@ -648,26 +635,9 @@ class TrapBase extends ItemBase
 	// ADVANCED PLACEMENT
 	//================================================================
 		
-	void PlayDeployLoopSound()
-	{		
-		#ifndef SERVER
-		if (!m_DeployLoopSound || !m_DeployLoopSound.IsSoundPlaying())
-		{
-			m_DeployLoopSound = SEffectManager.PlaySound(GetLoopDeploySoundset(), GetPosition());
-		}
-		#endif
-	}
+	void PlayDeployLoopSound(); //deprecated
 	
-	void StopDeployLoopSound()
-	{
-		#ifndef SERVER
-		if (m_DeployLoopSound)
-		{
-			m_DeployLoopSound.SetSoundFadeOut(0.5);
-			m_DeployLoopSound.SoundStop();
-		}
-		#endif
-	}
+	void StopDeployLoopSound(); //deprecated
 	
 	override void SetActions()
 	{

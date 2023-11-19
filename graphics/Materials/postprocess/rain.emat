@@ -5,8 +5,8 @@ material "Graphics/Materials/postprocess/rain.emat": RainEffect
 	DropSizeY 0.075
 	RainFogginess 0.5
 	RainDensity 1.0
-	FogColorMultiplier 0.5
-	BackgroundColorMultiplier 1.1
+	FogColorMultiplier 1.1
+	BackgroundColorMultiplier 2.3
 	RefractionScale 0.01
 	GodRayIntensityNear 1.5
 	GodRayIntensityFar 1.2

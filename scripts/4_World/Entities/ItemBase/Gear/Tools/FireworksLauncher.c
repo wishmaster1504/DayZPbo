@@ -3,27 +3,28 @@ class ExplosionLight : PointLightBase
 	void ExplosionLight()
 	{
 		SetVisibleDuringDaylight(true);
-		SetRadiusTo(80);
+		SetRadiusTo(60);
 		SetBrightnessTo(0.05);
 		SetFlareVisible(false);
 		SetAmbientColor(1.0, 1.0, 1.0);
 		SetDiffuseColor(1.0, 1.0, 1.0);
 		SetLifetime(2.1);
-		SetDisableShadowsWithinRadius(-1);
+		//SetDisableShadowsWithinRadius(-1);
 		SetFadeOutTime(1);
 		m_FadeInTime = 0.25;
 		SetFlickerSpeed(7);
 		//SetFlickerAmplitude(0.5);
 		SetFlickerAmplitudeMax(3);
 		SetFlickerAmplitudeMin(0);
+		SetCastShadow( false );
 	}
 }
-
+//-----------------------------------------------------------------------------------------------
 class FireworksLauncherClientEventBase
 {
 	void OnFired();
 }
-
+//-----------------------------------------------------------------------------------------------
 class FireworksLauncherClientEvent : FireworksLauncherClientEventBase
 {
 	protected ref Timer 			m_Timer = new Timer();
@@ -278,6 +279,7 @@ class FireworksLauncherClientEvent : FireworksLauncherClientEventBase
 		m_Item.PlaySoundSet( m_ExplosionSound, GetExplosionSoundSet(), 0, 0 );
 	}
 }
+//------------------------------------------------------------------------------------
 
 class FireworksLauncherClientEventSecondary : FireworksLauncherClientEvent
 {
@@ -336,8 +338,7 @@ class FireworksLauncher: FireworksBase
 		RegisterNetSyncVariableInt("m_RandomSeed", 0, 1023);
 		int lastIndex = m_ColorSequence.Count() - 1;
 		RegisterNetSyncVariableInt("m_ColorSequenceIndex", 0, lastIndex);
-		
-		m_RandomSeed = Math.Randomize(Math.RandomInt(0,1023));
+		m_RandomSeed = Math.RandomInt(0,1023);
 		m_ColorSequenceIndex = Math.RandomIntInclusive(0, lastIndex);
 	}
 	
@@ -345,6 +346,11 @@ class FireworksLauncher: FireworksBase
 	{
 		SEffectManager.DestroyEffect(m_FuseSound);
 		SEffectManager.DestroyEffect(m_FuseSoundStart);
+	}
+	
+	override protected bool UsesGlobalDeploy()
+	{
+		return true;
 	}
 	
 	override bool IsDeployable()
@@ -362,12 +368,16 @@ class FireworksLauncher: FireworksBase
 	{
 		m_ColorSequence.Insert("RGBYPBRGBRGBYPBRGBRGBYPBRGBPBRGBRGBY");
 		m_ColorSequence.Insert("PGPYPBYPYPBYYPBRPYPBYYPBRGBPBRGRGBRB");
-		m_ColorSequence.Insert("GRPBRGBRYPBYYPBRPYPBYYPBRGBPBRGRGBRB");
+		m_ColorSequence.Insert("YPBRPYPBYYPBRGBPBRGRGBRBGRPBRGBRYPBY");
 		m_ColorSequence.Insert("YRBGPRYPGRYBGRGRGBRBBYPYPBYRYPGRYGRP");
 		m_ColorSequence.Insert("BGRYPYRPBYYPYRBGPRYPGBYPBRGBPBRGBRGB");
 		m_ColorSequence.Insert("RYGRPBRGBYPBRRPBRGBBRBBYPYPRGBRGBRPY");
 		m_ColorSequence.Insert("GBRGBYRGBYPBRRPBRBYRYPGPYPRGBRGBRPYG");
 		m_ColorSequence.Insert("RYPBYYPBRGBYPBRGBRBGBPBRGRGBRBGRYPYR");
+		m_ColorSequence.Insert("PBRGBYPBRGBRBGBPBRGRGBRBGRYPYRRYPBYY");
+		m_ColorSequence.Insert("RGRGBRBBYPYPBYRYPGRYGRPYRBGPRYPGRYBG");
+		m_ColorSequence.Insert("RBYRYPGPYPRGBRGBRPYGGBRGBYRGBYPBRRPB");
+		m_ColorSequence.Insert("PRGBRGBRPYGGBRRBYRYPGPYGBYRGBYPBRRPB");
 	}
 	
 	string GetColorSequence()
@@ -470,7 +480,7 @@ class FireworksLauncher: FireworksBase
 	}
 	
 	//! Executed on Server when some item ignited this one
-	override protected void OnIgnitedThis( EntityAI fire_source)
+	override void OnIgnitedThis( EntityAI fire_source)
 	{
 		super.OnIgnitedThis(fire_source);
 		if (m_Events)
@@ -656,6 +666,16 @@ class FireworksLauncher: FireworksBase
 			SetState(m_State);
 		}
 		return true;
+	}
+	
+	override string GetDeploySoundset()
+	{
+		return "placeFireworks_SoundSet";
+	}
+	
+	override string GetLoopDeploySoundset()
+	{
+		return "fireworks_deploy_SoundSet";
 	}
 	
 	#ifdef DEVELOPER

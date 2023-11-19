@@ -1,0 +1,18 @@
+MetaFileClass {
+ Name "{29A3B99FF887AD65}Graphics/Particles/sprites/Fireworks_Amazing_cont.edds"
+ Author "3643"
+ ChangeDate -482545876
+ Configurations {
+  TGAResourceClass PC {
+   SourceFile "Fireworks_Amazing_cont.tga"
+   FormatCompress Medium
+   Conversion DXTCompression
+  }
+  TGAResourceClass XBOX_ONE : PC {
+  }
+  TGAResourceClass PS4 : PC {
+  }
+  TGAResourceClass LINUX : PC {
+  }
+ }
+}

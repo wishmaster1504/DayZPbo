@@ -7,6 +7,11 @@ class EmoteCB : HumanCommandActionCallback
 	
 	void ~EmoteCB()
 	{
+		if (m_Manager)
+		{
+			m_Manager.OnCallbackEnd();
+		}
+		
 		if (GetGame() && m_player)
 			m_player.RequestHandAnimationStateRefresh();
 	}
@@ -26,8 +31,11 @@ class EmoteCB : HumanCommandActionCallback
 		switch (pEventID)
 		{
 			case EmoteConstants.EMOTE_SUICIDE_DEATH :
+				
 				if (GetGame().IsServer())
 					m_Manager.KillPlayer();
+				
+				m_Manager.LogSuicide();
 			break;
 			
 			case UA_ANIM_EVENT :
@@ -60,7 +68,7 @@ class EmoteCB : HumanCommandActionCallback
 						m_player.GetInventory().DropEntityWithTransform(InventoryMode.SERVER, m_player, itemInHands, m4);
 					}
 				}
-
+				
 				m_player.StartDeath();
 			break;
 		}
@@ -126,6 +134,7 @@ class EmoteManager
 	protected bool			m_MouseButtonPressed;
 	protected bool 			m_PlayerDies;
 	protected bool 			m_controllsLocked;
+	protected bool 			m_InventoryAccessLocked;
 	protected bool 			m_EmoteLockState;
 	protected int 			m_DeferredEmoteExecution;
 	protected int  			m_GestureID;
@@ -152,6 +161,8 @@ class EmoteManager
 		m_Player = player;
 		m_HIC = m_Player.GetInputController();
 		m_ItemIsOn = false;
+		m_controllsLocked = false;
+		m_InventoryAccessLocked = false;
 		m_RPSOutcome = -1;
 		m_DeferredEmoteExecution = CALLBACK_CMD_INVALID;
 		
@@ -338,7 +349,7 @@ class EmoteManager
 			
 			if (gestureSlot > 0 || m_GestureInterruptInput || (m_HIC.IsSingleUse() && !uiGesture) || (m_HIC.IsContinuousUseStart() && !uiGesture) || (m_Callback.m_IsFullbody && !uiGesture && m_HIC.IsWeaponRaised())) 
 			{
-				if (m_CurrentGestureID == EmoteConstants.ID_EMOTE_SUICIDE  && m_HIC.IsSingleUse())
+				if (m_CurrentGestureID == EmoteConstants.ID_EMOTE_SUICIDE && m_HIC.IsSingleUse())
 				{
 					if (m_Callback.GetState() == m_Callback.STATE_LOOP_LOOP)
 					{
@@ -524,13 +535,29 @@ class EmoteManager
 			pCtx.Read(gesture_id);
 			pCtx.Read(forced);
 			
+			EmoteBase emoteData;
 			if ((m_Callback || m_IsSurrendered) && (forced == EmoteLauncher.FORCE_ALL || (forced == EmoteLauncher.FORCE_DIFFERENT && m_CurrentGestureID != gesture_id)))
-			{
+			{	
+				if (m_Callback)
+				{
+					if (m_NameEmoteMap.Find(m_CurrentGestureID,emoteData) && emoteData.CanBeCanceledNormally(m_Callback))
+						m_CancelEmote = true;
+					else
+						return;
+				}
 				m_CancelEmote = true;
 			}
 			
 			if (gesture_id == CALLBACK_CMD_INSTACANCEL)
 			{
+				if (m_Callback)
+				{
+					if (m_NameEmoteMap.Find(m_CurrentGestureID,emoteData) && !emoteData.CanBeCanceledNormally(m_Callback))
+					{
+						m_InstantCancelEmote = false;
+						return;
+					}
+				}
 				m_InstantCancelEmote = true;
 			}
 			
@@ -538,6 +565,13 @@ class EmoteManager
 		}
 		else
 			m_CancelEmote = false;
+	}
+	
+	void OnCallbackEnd()
+	{
+		EmoteBase emoteData;
+		if (m_NameEmoteMap.Find(m_CurrentGestureID,emoteData))
+			emoteData.OnCallbackEnd();
 	}
 	
 	void AfterStoreLoad()
@@ -553,7 +587,6 @@ class EmoteManager
 		
 		if (!CanPlayEmote(id))
 		{
-			m_Player.SetInventorySoftLock(false);
 			return false;
 		}
 		
@@ -585,23 +618,13 @@ class EmoteManager
 				}
 				else
 				{
-					Error("EmoteManager | DetermineEmoteData failed!");
+					ErrorEx("EmoteManager | DetermineEmoteData failed!");
 				}
 			}
 		}
 		
-		if (m_bEmoteIsPlaying)
-		{
-			m_Player.SetInventorySoftLock(true);
-			if (m_Callback.m_IsFullbody)
-			{
-				SetEmoteLockState(true);
-			}
-			
-			return true;
-		}
-		
-		return false;
+		SetEmoteLockState(m_bEmoteIsPlaying);
+		return m_bEmoteIsPlaying;
 	}
 	
 	//creates Emote callback
@@ -692,10 +715,8 @@ class EmoteManager
 			m_Callback.RegisterAnimationEvent("Death",EmoteConstants.EMOTE_SUICIDE_DEATH);
 			m_Callback.RegisterAnimationEvent("Bleed",EmoteConstants.EMOTE_SUICIDE_BLEED);
 			m_Callback.RegisterAnimationEvent("Simulation_End",EmoteConstants.EMOTE_SUICIDE_SIMULATION_END);
-			m_Player.SetSuicide(true);
 			m_Callback.InternalCommand(DayZPlayerConstants.CMD_ACTIONINT_FINISH);
-			
-			LogSuicide();
+			m_Player.SetSuicide(true);
 		}
 		else
 		{
@@ -791,7 +812,14 @@ class EmoteManager
 		ScriptInputUserData ctx = new ScriptInputUserData;
 		if (GetGame().IsMultiplayer() && GetGame().IsClient())
 		{
-			if (ctx.CanStoreInputUserData() && (CanPlayEmote(id) || forced))
+			bool canProceed = true; //running callbacks in certain state can block additional actions
+			EmoteBase emoteData;
+			if (m_Callback && m_NameEmoteMap.Find(m_CurrentGestureID,emoteData))
+			{
+				canProceed = emoteData.CanBeCanceledNormally(m_Callback);
+			}
+			
+			if (ctx.CanStoreInputUserData() && (CanPlayEmote(id) || forced) && canProceed)
 			{
 				ctx.Write(INPUT_UDT_GESTURE);
 				ctx.Write(id);
@@ -801,11 +829,6 @@ class EmoteManager
 					ctx.Write(m_RPSOutcome);
 				}
 				ctx.Send();
-				
-				if (id > 0)
-				{
-					m_Player.SetInventorySoftLock(true);
-				}
 			}
 			m_MenuEmote = NULL;
 		}
@@ -940,7 +963,20 @@ class EmoteManager
 	//!
 	void SetEmoteLockState(bool state)
 	{
-		DayZPlayerCameraBase camera = DayZPlayerCameraBase.Cast(m_Player.GetCurrentCamera());
+		//separate inventory access locking
+		if (state != m_InventoryAccessLocked)
+		{
+			m_Player.SetInventorySoftLock(state);
+			m_InventoryAccessLocked = state;
+		}
+		
+		//full emote locking (
+		if (state == m_EmoteLockState)
+		{
+			ErrorEx("emote lock state already set",ErrorExSeverity.INFO);
+			return;
+		}
+		
 		if (!m_HandInventoryLocation)
 		{
 			m_HandInventoryLocation = new InventoryLocation;
@@ -950,35 +986,25 @@ class EmoteManager
 		if (!state)
 		{
 			if (m_Player.GetInventory().HasInventoryReservation(null, m_HandInventoryLocation))
-			{
 				m_Player.GetInventory().ClearInventoryReservationEx(null, m_HandInventoryLocation);
-			}
 			
 			if (m_Player.GetActionManager())
 				m_Player.GetActionManager().EnableActions(true);
-			
-			m_Player.SetInventorySoftLock(false);
-						
+				
 			if (m_controllsLocked)
-			{
 				m_controllsLocked = false;
-			}
 		}
 		else
 		{
 			if (!m_Player.GetInventory().HasInventoryReservation(null, m_HandInventoryLocation))
-			{
 				m_Player.GetInventory().AddInventoryReservationEx(null, m_HandInventoryLocation, GameInventory.c_InventoryReservationTimeoutMS);
-			}
 				
 			if (m_Player.GetActionManager())
 				m_Player.GetActionManager().EnableActions(false);
 			
 			//Movement lock in fullbody anims
 			if (m_Callback && m_Callback.m_IsFullbody && !m_controllsLocked)
-			{
 				m_controllsLocked = true;
-			}
 		}
 		m_EmoteLockState = state;
 	}

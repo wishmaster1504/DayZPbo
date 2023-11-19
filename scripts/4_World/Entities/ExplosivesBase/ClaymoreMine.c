@@ -17,7 +17,6 @@ class ClaymoreMine : ExplosivesBase
 
 		RegisterNetSyncVariableInt("m_RAIB.m_PairDeviceNetIdLow");
 		RegisterNetSyncVariableInt("m_RAIB.m_PairDeviceNetIdHigh");
-
 		UpdateLED(ERemoteDetonatorLEDState.OFF, true);
 	}
 	
@@ -29,7 +28,6 @@ class ClaymoreMine : ExplosivesBase
 	override void EEKilled(Object killer)
 	{
 		super.EEKilled(killer);
-
 #ifdef DIAG_DEVELOPER
 #ifndef SERVER
 		RemoveDebugVisuals();
@@ -47,7 +45,7 @@ class ClaymoreMine : ExplosivesBase
 #endif
 #endif
 	}
-	
+
 	override protected void InitiateExplosion()
 	{
 		if (GetDefused())
@@ -91,30 +89,7 @@ class ClaymoreMine : ExplosivesBase
 		}
 	}
 	
-	override bool CanPutInCargo(EntityAI parent)
-	{
-		if (!super.CanPutInCargo(parent))
-		{
-			return false;
-		}
 
-		return IsTakeable();
-	}
-	
-	override bool CanPutIntoHands(EntityAI parent)
-	{
-		if (!super.CanPutIntoHands(parent))
-		{
-			return false;
-		}
-
-		return IsTakeable();
-	}
-
-	override bool CanRemoveFromHands(EntityAI parent)
-	{
-		return IsTakeable();
-	}
 	
 	override RemotelyActivatedItemBehaviour GetRemotelyActivatedItemBehaviour()
 	{
@@ -124,16 +99,6 @@ class ClaymoreMine : ExplosivesBase
 	override void PairRemote(notnull EntityAI trigger)
 	{
 		m_RAIB.Pair(trigger);
-	}
-	
-	override void UnpairRemote()
-	{
-		if (GetPairDevice())
-		{
-			GetPairDevice().UnpairRemote();
-		}
-
-		m_RAIB.Unpair();
 	}
 	
 	override EntityAI GetPairDevice()
@@ -204,8 +169,7 @@ class ClaymoreMine : ExplosivesBase
 			RemoteDetonatorTrigger rdt = RemoteDetonatorTrigger.SpawnInPlayerHands(player);
 			if (rdt)
 			{
-				rdt.SetControlledDevice(this);
-				PairRemote(rdt);
+				PairWithDevice(rdt);
 				Arm();
 			}
 		}
@@ -255,7 +219,7 @@ class ClaymoreMine : ExplosivesBase
 
 	override bool IsTakeable()
 	{
-		return !GetArmed();
+		return !GetArmed() && super.IsTakeable();
 	}
 	
 	override bool IsDeployable()
@@ -284,12 +248,26 @@ class ClaymoreMine : ExplosivesBase
 		
 		return 0;
 	}
-			
+	
+	override protected bool UsesGlobalDeploy()
+	{
+		return true;
+	}
+	
+	override string GetDeploySoundset()
+	{
+		return "placeClaymore_SoundSet";
+	}
+	
+	override string GetLoopDeploySoundset()
+	{
+		return "claymore_deploy_Soundset";
+	}
+	
 	override void OnDebugSpawn()
 	{
 		RemoteDetonatorTrigger rdt = RemoteDetonatorTrigger.Cast(SpawnEntityOnGroundPos("RemoteDetonatorTrigger", GetPosition() + GetDirection() * 0.5));
-		rdt.SetControlledDevice(this);
-		PairRemote(rdt);
+		PairWithDevice(rdt);
 		Arm();
 	}
 	

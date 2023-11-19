@@ -29,60 +29,34 @@ class ActionDigWorms: ActionContinuousBase
 		m_ConditionTarget = new CCTSurface(UAMaxDistances.DEFAULT);
 	}
 	
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool Can(PlayerBase player, ActionTarget target, ItemBase item, int condition_mask)
 	{
-		if ( player.IsPlacingLocal() )
+		if (!super.Can(player, target, item, condition_mask))
 			return false;
 		
-		// Check if player is standing on terrain
-		vector plr_pos = player.GetPosition();
-		float height = GetGame().SurfaceY(plr_pos[0], plr_pos[2]);
-		height = plr_pos[1] - height;
-		
-		if ( height > 0.4 )
-			return false; // Player is not standing on ground
-		
-		if ( !GetGame().IsDedicatedServer() )
-		{
-			if ( !player.IsPlacingLocal() /*&& player.IsCurrentCameraAimedAtGround()*/ )
-			{
-				if ( target )
-				{
-					string surface_type;
-					vector position;
-					position = target.GetCursorHitPos();
-					
-					GetGame().SurfaceGetType( position[0], position[2], surface_type );
-					
-					//float distance = vector.Distance(plr_pos,position);
-					
-					if ( GetGame().IsSurfaceFertile(surface_type) )
-					{
-						return true;
-					}
-				}
-			}
-		
-			return false;
-		}
-		else
-		{
-			return true;
-		}
+		return player.CheckFreeSpace(vector.Forward, 0.8, false);
 	}
 	
-	override bool ActionConditionContinue( ActionData action_data )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		return true;
+		if (player.IsPlacingLocal())
+			return false;
+		
+		return IsTargetFertile(target) && IsPlayerOnGround(player);
+	}
+	
+	override bool ActionConditionContinue(ActionData action_data)
+	{
+		return IsPlayerOnGround(action_data.m_Player);
 	}
 	
 	override bool SetupAction( PlayerBase player, ActionTarget target, ItemBase item, out ActionData action_data, Param extra_data = NULL )
 	{	
-		if( super.SetupAction( player, target, item, action_data, extra_data ) )
+		if (super.SetupAction(player, target, item, action_data, extra_data))
 		{
-			if ( item )
+			if (item)
 			{
-				SetDiggingAnimation( item );
+				SetDiggingAnimation(item);
 			}
 			
 			return true;
@@ -96,13 +70,13 @@ class ActionDigWorms: ActionContinuousBase
 		return true;
 	}
 
-	override void OnFinishProgressServer( ActionData action_data )
+	override void OnFinishProgressServer(ActionData action_data)
 	{	
 		ItemBase worms;
-		Class.CastTo(worms,  GetGame().CreateObjectEx("Worm", action_data.m_Player.GetPosition(), ECE_PLACE_ON_SURFACE) );
+		Class.CastTo(worms,  GetGame().CreateObjectEx("Worm", action_data.m_Player.GetPosition(), ECE_PLACE_ON_SURFACE));
 		worms.SetQuantity(10,false);
 		MiscGameplayFunctions.DealAbsoluteDmg(action_data.m_MainItem, 4);
-		action_data.m_Player.GetSoftSkillsManager().AddSpecialty( m_SpecialtyWeight );
+		action_data.m_Player.GetSoftSkillsManager().AddSpecialty(m_SpecialtyWeight);
 	}
 	
 	void SetDiggingAnimation( ItemBase item )
@@ -117,5 +91,33 @@ class ActionDigWorms: ActionContinuousBase
 			m_CommandUID = DayZPlayerConstants.CMD_ACTIONFB_DIGMANIPULATE;
 			m_StanceMask = DayZPlayerConstants.STANCEMASK_ERECT;
 		}
+	}
+	
+	bool IsTargetFertile(ActionTarget target)
+	{
+		if (target)
+		{
+			string surface_type;
+			vector position;
+			position = target.GetCursorHitPos();
+			
+			GetGame().SurfaceGetType(position[0], position[2], surface_type);
+			
+			if (GetGame().IsSurfaceFertile(surface_type))
+			{
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	bool IsPlayerOnGround(PlayerBase player)
+	{
+		vector position = player.GetPosition();
+		float heightDiff = GetGame().SurfaceY(position[0], position[2]);
+		heightDiff = position[1] - heightDiff;
+		
+		return heightDiff <= 0.4; // Player is considered on ground
 	}
 };

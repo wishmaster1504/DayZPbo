@@ -72,7 +72,7 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 
 	protected void RegisterCooldowns()
 	{
-		m_CooldownTimers = new map<int, ref Timer>;
+		m_CooldownTimers = new map<int, ref Timer>();
 		m_CooldownTimers.Insert(EFightLogicCooldownCategory.EVADE, new Timer(CALL_CATEGORY_SYSTEM)); // evades
 	}
 
@@ -136,9 +136,10 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 		
 		//! Check if we need to damage
 		if (HandleHitEvent(pCurrentCommandID, pInputs, itemInHands, pMovementState, pContinueAttack))
-		{
 			return false;
-		}
+		
+		if (player.IsEmotePlaying())
+			return false;
 
 		//! Actually pressing a button to start a melee attack
 		if ((pInputs.IsAttackButtonDown() && !isFireWeapon) || (pInputs.IsMeleeWeaponAttack() && isFireWeapon) || (pContinueAttack && isFireWeapon))
@@ -147,15 +148,11 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 			
 			//! do not perform attacks when blocking
 			if (m_IsInBlock || m_IsEvading)
-			{
 				return false;
-			}
 			
 			//! if the item in hands cannot be used as melee weapon
 			if (itemInHands && !itemInHands.IsMeleeWeapon() && !isFireWeapon)
-			{
 				return false;
-			}
 			
 			//! Currently not performing any attacks, so here we start the initial
 			if (pCurrentCommandID == DayZPlayerConstants.COMMANDID_MOVE)
@@ -605,13 +602,15 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 	{
 		int hitZoneIdx = m_MeleeCombat.GetHitZoneIdx();
 		int weaponMode = m_MeleeCombat.GetWeaponMode();
+		int forcedWeaponMode = -1;
 		vector hitPosWS;
 		bool forcedDummy = false;
+
 
 		PlayerBase targetPlayer = PlayerBase.Cast(target);
 
 		//! Melee Hit/Impact modifiers
-		if ( targetPlayer )
+		if (targetPlayer)
 		{
 			vector targetPos = targetPlayer.GetPosition();
 			vector agressorPos = m_DZPlayer.GetPosition();
@@ -622,18 +621,16 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 			//! if the oponnent is in Melee Block shift the damage down
 			if (targetPlayer.GetMeleeFightLogic() && targetPlayer.GetMeleeFightLogic().IsInBlock() && hitAngle <= GameConstants.PVP_MAX_BLOCKABLE_ANGLE)
 			{
-				if ( weaponMode > 0 )
+				if (weaponMode > 0)
 				{
-					weaponMode--; // Heavy -> Light shift
+					forcedWeaponMode = --weaponMode; // Heavy -> Light shift
 				}
 				else
-				{
 					forcedDummy = true; // dummy hits, cannot shift lower than 0
-				}
 			}
 		}
 
-		EvaluateHit_Common(weapon, target, forcedDummy);
+		EvaluateHit_Common(weapon, target, forcedDummy, forcedWeaponMode);
 	}
 	
 	protected void EvaluateHit_Infected(InventoryItem weapon, Object target)
@@ -651,7 +648,7 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 		if (m_MeleeCombat.GetFinisherType() > -1)
 		{
 			if (GetGame().IsServer())
-				DamageSystem.CloseCombatDamage(m_DZPlayer, target, -1, DetermineFinisherAmmo(m_MeleeCombat.GetFinisherType()), m_MeleeCombat.GetHitPos());
+				DamageSystem.CloseCombatDamage(m_DZPlayer, target, m_MeleeCombat.GetHitZoneIdx(), DetermineFinisherAmmo(m_MeleeCombat.GetFinisherType()), m_MeleeCombat.GetHitPos(), ProcessDirectDamageFlags.NO_ATTACHMENT_TRANSFER);
 				
 			return true;
 		}
@@ -659,12 +656,15 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 		return false;
 	}
 	
-	protected void EvaluateHit_Common(InventoryItem weapon, Object target, bool forcedDummy=false)
+	protected void EvaluateHit_Common(InventoryItem weapon, Object target, bool forcedDummy=false, int forcedWeaponMode = -1)
 	{
 		int hitZoneIdx = m_MeleeCombat.GetHitZoneIdx();
 		int weaponMode = m_MeleeCombat.GetWeaponMode();
 		vector hitPosWS;
 		string ammo;
+		
+		if (forcedWeaponMode > -1)
+			weaponMode = forcedWeaponMode;
 
 		EntityAI targetEntity = EntityAI.Cast(target);
 
@@ -676,15 +676,15 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 			{
 				hitPosWS = targetEntity.ModelToWorld(targetEntity.GetDefaultHitPosition());
 				
-				if (WeaponDestroyedCheck(weapon,ammo))
+				if (WeaponDestroyedCheck(weapon, ammo))
 				{
-					DamageSystem.CloseCombatDamage(m_DZPlayer, target, hitZoneIdx, ammo, hitPosWS);					
-					//Debug.MeleeLog(m_DZPlayer, string.Format("EvaluateHit_Common::CloseCombatDamage:: target: %1, hitzone: %2, ammo: %3", target, hitZoneIdx, ammo));
+					DamageSystem.CloseCombatDamage(m_DZPlayer, target, hitZoneIdx, ammo, hitPosWS);
+					//Debug.MeleeLog(m_DZPlayer, string.Format("EvaluateHit_Common[a]::CloseCombatDamage:: target: %1, hitzone: %2, ammo: %3", target, hitZoneIdx, ammo));
 				}
 				else
 				{
 					m_DZPlayer.ProcessMeleeHit(weapon, weaponMode, target, hitZoneIdx, hitPosWS);
-					//Debug.MeleeLog(m_DZPlayer, string.Format("EvaluateHit_Common::ProcessMeleeHit:: target: %1, hitzone: %2, meleeMode: %3", target, hitZoneIdx, weaponMode));
+					//Debug.MeleeLog(m_DZPlayer, string.Format("EvaluateHit_Common[b]::ProcessMeleeHit:: target: %1, hitzone: %2, meleeMode: %3, forcedWeaponMode:%4", target, hitZoneIdx, weaponMode));
 				}
 			}
 		}
@@ -693,9 +693,10 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 			//! play hit animation for dummy hits
 			if (GetGame().IsServer() && targetEntity)
 			{
+				DummyHitSelector(m_HitType, ammo);
 				hitPosWS = targetEntity.ModelToWorld(targetEntity.GetDefaultHitPosition()); //! override hit pos by pos defined in type
-				targetEntity.EEHitBy(null, 0, m_DZPlayer, hitZoneIdx, "", ammo, hitPosWS, 1.0);
-				//Debug.MeleeLog(m_DZPlayer, string.Format("EvaluateHit_Common::EEHitBy:: target: %1, hitzone: %2, meleeMode: %3", target, hitZoneIdx, weaponMode));
+				DamageSystem.CloseCombatDamage(m_DZPlayer, target, hitZoneIdx, ammo, hitPosWS);
+				//Debug.MeleeLog(m_DZPlayer, string.Format("EvaluateHit_Common[c]::CloseCombatDamage:: target: %1, hitzone: %2, meleeMode: %3, ammo: %4", target, hitZoneIdx, weaponMode, ammo));
 			}
 		}
 	}
@@ -860,7 +861,7 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 									bleedingManager.AttemptAddBleedingSourceBySelection("RightForeArmRoll");
 								}
 							}
-						break;
+							break;
 						
 						case 2:
 							player = PlayerBase.Cast( DZPlayer );
@@ -872,11 +873,7 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 									bleedingManager.AttemptAddBleedingSourceBySelection("LeftForeArmRoll");
 								}
 							}
-						break;
-						
-						default:
-							//Do nothing here
-						break;
+							break;
 					}
 				}
 				else
@@ -896,7 +893,7 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 									bleedingManager.AttemptAddBleedingSourceBySelection("LeftToeBase");
 								}
 							}
-						break;
+							break;
 						
 						case 2:
 							player = PlayerBase.Cast( DZPlayer );
@@ -908,11 +905,7 @@ class DayZPlayerMeleeFightLogic_LightHeavy
 									bleedingManager.AttemptAddBleedingSourceBySelection("LeftFoot");
 								}
 							}
-						break;
-						
-						default:
-							//Do nothing here
-						break;
+							break;
 					}
 				}
 			}

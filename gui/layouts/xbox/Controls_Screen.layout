@@ -37,7 +37,8 @@ PanelWidgetClass rootFrame {
      vexactsize 0
      {
       FrameWidgetClass XboxGeneralNew {
-       visible 0
+       visible 1
+       disabled 0
        ignorepointer 1
        position 0 0
        size 1 1
@@ -280,10 +281,106 @@ PanelWidgetClass rootFrame {
               }
              }
             }
+            GridSpacerWidgetClass PanelWidget134 {
+             visible 1
+             clipchildren 1
+             ignorepointer 1
+             color 0 0 0 1
+             size 1 1
+             halign right_ref
+             valign center_ref
+             hexactpos 0
+             vexactpos 0
+             hexactsize 0
+             vexactsize 0
+             scaled 1
+             userID 1024
+             style DayZDefaultPanel
+             Padding 5
+             Margin 5
+             "Size To Content H" 1
+             "Size To Content V" 1
+             content_halign right
+             content_valign center
+             Columns 4
+             Rows 1
+             {
+              MultilineTextWidgetClass TextWidget135 {
+               visible 1
+               ignorepointer 1
+               position -0.02829 0
+               size 0.94343 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "Camera position"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text halign" right
+               "text valign" center
+               wrap 1
+              }
+              ImageWidgetClass ImageWidget135 {
+               ignorepointer 1
+               position 0 0
+               size 40 32
+               halign right_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:xbox_buttons image:LB"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+              MultilineTextWidgetClass TextWidget136 {
+               visible 1
+               ignorepointer 1
+               position -0.47088 0
+               size 0.05824 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "/"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text halign" center
+               "text valign" center
+               wrap 1
+              }
+              ImageWidgetClass ImageWidget223 {
+               ignorepointer 1
+               size 40 32
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:xbox_buttons image:RB"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+             }
+            }
             FrameWidgetClass FrameWidget4 {
              ignorepointer 1
-             position 0 0
-             size 0.1 0.12
+             position 0 0.03724
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -416,7 +513,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget5 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.11
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -734,6 +831,7 @@ PanelWidgetClass rootFrame {
          }
         }
         FrameWidgetClass XboxGeneralNew_Right {
+         visible 1
          ignorepointer 1
          position 0.35 0
          size 0.25 0.9
@@ -878,7 +976,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget6 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -1261,7 +1359,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget7 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -1403,6 +1501,7 @@ PanelWidgetClass rootFrame {
        vexactsize 0
        {
         FrameWidgetClass XboxGeneralOld_Left {
+         visible 1
          ignorepointer 1
          position -0.35 0
          size 0.25 0.9
@@ -1627,10 +1726,106 @@ PanelWidgetClass rootFrame {
               }
              }
             }
+            GridSpacerWidgetClass PanelWidget135 {
+             visible 1
+             clipchildren 1
+             ignorepointer 1
+             color 0 0 0 1
+             size 1 1
+             halign right_ref
+             valign center_ref
+             hexactpos 0
+             vexactpos 0
+             hexactsize 0
+             vexactsize 0
+             scaled 1
+             userID 1024
+             style DayZDefaultPanel
+             Padding 5
+             Margin 5
+             "Size To Content H" 1
+             "Size To Content V" 1
+             content_halign right
+             content_valign center
+             Columns 4
+             Rows 1
+             {
+              MultilineTextWidgetClass TextWidget137 {
+               visible 1
+               ignorepointer 1
+               position -0.02829 0
+               size 0.94343 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "Camera position"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text halign" right
+               "text valign" center
+               wrap 1
+              }
+              ImageWidgetClass ImageWidget136 {
+               ignorepointer 1
+               position 0 0
+               size 40 32
+               halign right_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:xbox_buttons image:LB"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+              MultilineTextWidgetClass TextWidget138 {
+               visible 1
+               ignorepointer 1
+               position -0.4709 0.05
+               size 0.05824 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "/"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text halign" center
+               "text valign" center
+               wrap 1
+              }
+              ImageWidgetClass ImageWidget226 {
+               ignorepointer 1
+               size 40 32
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:xbox_buttons image:RB"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+             }
+            }
             FrameWidgetClass FrameWidget20 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.11
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -1763,7 +1958,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget21 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.12
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -2237,7 +2432,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget120 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -2602,7 +2797,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget121 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -2759,6 +2954,7 @@ PanelWidgetClass rootFrame {
        userID 1
        {
         FrameWidgetClass XboxCombatNew_Left {
+         visible 1
          ignorepointer 1
          position -0.35 0
          size 0.25 0.9
@@ -2911,7 +3107,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget122 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.18
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -3041,7 +3237,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget123 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.13
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -3505,7 +3701,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget124 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.13
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -3743,7 +3939,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget125 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.13
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -4038,7 +4234,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget126 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.1
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -4168,7 +4364,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget127 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.13
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -4509,7 +4705,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget128 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -4805,7 +5001,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget129 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -4962,6 +5158,7 @@ PanelWidgetClass rootFrame {
        userID 1
        {
         FrameWidgetClass XboxInventoryNew_Left {
+         visible 1
          ignorepointer 1
          position -0.35 0
          size 0.25 0.9
@@ -5114,7 +5311,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1120 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.25
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -5186,7 +5383,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1121 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.25
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -5260,6 +5457,7 @@ PanelWidgetClass rootFrame {
          }
         }
         FrameWidgetClass XboxInventoryNew_Right {
+         visible 1
          ignorepointer 1
          position 0.35 0
          size 0.25 0.9
@@ -5461,7 +5659,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1122 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -5743,7 +5941,64 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 0
                vexactsize 0
-               text "#STR_Controls_CombineSplit"
+               text "#STR_Controls_Combine"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text valign" center
+               wrap 1
+              }
+             }
+            }
+            GridSpacerWidgetClass PanelWidget12125 {
+             visible 1
+             clipchildren 1
+             ignorepointer 1
+             color 0 0 0 1
+             size 1 1
+             valign center_ref
+             hexactpos 0
+             vexactpos 0
+             hexactsize 0
+             vexactsize 0
+             scaled 1
+             userID 65536
+             style DayZDefaultPanel
+             Padding 5
+             Margin 5
+             "Size To Content H" 1
+             "Size To Content V" 1
+             content_halign right
+             content_valign center
+             Columns 2
+             Rows 1
+             {
+              ImageWidgetClass ImageWidget12125 {
+               ignorepointer 1
+               size 38 38
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:xbox_buttons image:A"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+              MultilineTextWidgetClass TextWidget12125 {
+               visible 1
+               ignorepointer 1
+               size 1 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "#action_target_cursor_hold #STR_Controls_Split"
                font "gui/fonts/sdf_MetronLight24"
                "exact text" 1
                "exact text size" 22
@@ -5757,7 +6012,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1123 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -5898,6 +6153,7 @@ PanelWidgetClass rootFrame {
        vexactsize 0
        {
         FrameWidgetClass XboxInventoryOld_Left {
+         visible 1
          ignorepointer 1
          position -0.35 0
          size 0.25 0.9
@@ -6050,7 +6306,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1124 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.27
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -6183,7 +6439,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1125 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.2
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -6257,6 +6513,7 @@ PanelWidgetClass rootFrame {
          }
         }
         FrameWidgetClass XboxInventoryOld_Right {
+         visible 1
          ignorepointer 1
          position 0.35 0
          size 0.25 0.9
@@ -6401,7 +6658,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1126 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -6740,7 +6997,7 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 0
                vexactsize 0
-               text "#STR_Controls_Combine"
+               text "#action_target_cursor_hold #STR_Controls_Combine"
                font "gui/fonts/sdf_MetronLight24"
                "exact text" 1
                "exact text size" 22
@@ -6811,7 +7068,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1127 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -7059,7 +7316,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1128 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.26
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -7246,17 +7503,6 @@ PanelWidgetClass rootFrame {
                stretch 0
               }
              }
-            }
-            FrameWidgetClass FrameWidget1129 {
-             ignorepointer 1
-             position 0 0
-             size 0.1 0.05
-             halign center_ref
-             valign center_ref
-             hexactpos 0
-             vexactpos 0
-             hexactsize 0
-             vexactsize 0
             }
             GridSpacerWidgetClass PanelWidget4116 {
              visible 1
@@ -7530,7 +7776,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11114 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -7712,7 +7958,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11115 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -7888,18 +8134,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11116 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.14
-             halign center_ref
-             valign center_ref
-             hexactpos 0
-             vexactpos 0
-             hexactsize 0
-             vexactsize 0
-            }
-            FrameWidgetClass FrameWidget11117 {
-             ignorepointer 1
-             position 0 0
-             size 0.1 0.17
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -8178,7 +8413,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11118 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -8360,7 +8595,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11119 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -8633,7 +8868,7 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 1
                vexactsize 1
-               image0 "set:xbox_buttons image:menu"
+               image0 "set:xbox_buttons image:view"
                mode blend
                "src alpha" 1
                stretch 0
@@ -8643,7 +8878,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11120 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.13
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -8798,6 +9033,7 @@ PanelWidgetClass rootFrame {
               MultilineTextWidgetClass TextWidget57 {
                visible 1
                ignorepointer 1
+               position 0 0
                size 1 1
                halign center_ref
                valign center_ref
@@ -8864,7 +9100,7 @@ PanelWidgetClass rootFrame {
         }
         FrameWidgetClass XboxMenuNew_Right {
          ignorepointer 1
-         position 0.35 0
+         position 0.35 0.04
          size 0.25 0.9
          halign center_ref
          valign center_ref
@@ -9015,7 +9251,7 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 1
                vexactsize 1
-               image0 "set:xbox_buttons image:view"
+               image0 "set:xbox_buttons image:menu"
                mode blend
                "src alpha" 1
                stretch 0
@@ -9044,7 +9280,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11124 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.24
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -9367,7 +9603,7 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 1
                vexactsize 1
-               image0 "set:xbox_buttons image:menu"
+               image0 "set:xbox_buttons image:view"
                mode blend
                "src alpha" 1
                stretch 0
@@ -9377,7 +9613,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget111110 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.12
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -9804,7 +10040,7 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 1
                vexactsize 1
-               image0 "set:xbox_buttons image:view"
+               image0 "set:xbox_buttons image:menu"
                mode blend
                "src alpha" 1
                stretch 0
@@ -9833,7 +10069,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget111112 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.22
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -10001,7 +10237,7 @@ PanelWidgetClass rootFrame {
      vexactsize 0
      {
       FrameWidgetClass PSGeneralNew {
-       visible 0
+       visible 1
        ignorepointer 1
        position 0 0
        size 1 1
@@ -10240,10 +10476,106 @@ PanelWidgetClass rootFrame {
               }
              }
             }
+            GridSpacerWidgetClass PanelWidget136 {
+             visible 1
+             clipchildren 1
+             ignorepointer 1
+             color 0 0 0 1
+             size 1 1
+             halign right_ref
+             valign center_ref
+             hexactpos 0
+             vexactpos 0
+             hexactsize 0
+             vexactsize 0
+             scaled 1
+             userID 1024
+             style DayZDefaultPanel
+             Padding 5
+             Margin 5
+             "Size To Content H" 1
+             "Size To Content V" 1
+             content_halign right
+             content_valign center
+             Columns 4
+             Rows 1
+             {
+              MultilineTextWidgetClass TextWidget139 {
+               visible 1
+               ignorepointer 1
+               position -0.02829 0
+               size 0.94343 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "Camera position"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text halign" right
+               "text valign" center
+               wrap 1
+              }
+              ImageWidgetClass ImageWidget137 {
+               ignorepointer 1
+               position 0 0
+               size 40 32
+               halign right_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:playstation_buttons image:L1"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+              MultilineTextWidgetClass TextWidget1310 {
+               visible 1
+               ignorepointer 1
+               position -0.47088 0
+               size 0.05824 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "/"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text halign" center
+               "text valign" center
+               wrap 1
+              }
+              ImageWidgetClass ImageWidget227 {
+               ignorepointer 1
+               size 40 32
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:playstation_buttons image:R1"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+             }
+            }
             FrameWidgetClass FrameWidget0 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.1
+             size 0.045 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -10344,7 +10676,7 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 0
                vexactsize 0
-               text "#STR_Controls_Gestures  #action_target_cursor_hold"
+               text "#STR_Controls_Gestures #action_target_cursor_hold"
                font "gui/fonts/sdf_MetronLight24"
                "exact text" 1
                "exact text size" 22
@@ -10434,7 +10766,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.14
+             size 0.045 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -10709,7 +11041,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget2 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -11086,7 +11418,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget3 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -11447,10 +11779,106 @@ PanelWidgetClass rootFrame {
               }
              }
             }
+            GridSpacerWidgetClass PanelWidget137 {
+             visible 1
+             clipchildren 1
+             ignorepointer 1
+             color 0 0 0 1
+             size 1 1
+             halign right_ref
+             valign center_ref
+             hexactpos 0
+             vexactpos 0
+             hexactsize 0
+             vexactsize 0
+             scaled 1
+             userID 1024
+             style DayZDefaultPanel
+             Padding 5
+             Margin 5
+             "Size To Content H" 1
+             "Size To Content V" 1
+             content_halign right
+             content_valign center
+             Columns 4
+             Rows 1
+             {
+              MultilineTextWidgetClass TextWidget1311 {
+               visible 1
+               ignorepointer 1
+               position -0.02829 0
+               size 0.94343 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "Camera position"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text halign" right
+               "text valign" center
+               wrap 1
+              }
+              ImageWidgetClass ImageWidget138 {
+               ignorepointer 1
+               position 0 0
+               size 40 32
+               halign right_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:playstation_buttons image:L1"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+              MultilineTextWidgetClass TextWidget1312 {
+               visible 1
+               ignorepointer 1
+               position -0.47088 0
+               size 0.05824 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "/"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text halign" center
+               "text valign" center
+               wrap 1
+              }
+              ImageWidgetClass ImageWidget228 {
+               ignorepointer 1
+               size 40 32
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:playstation_buttons image:R1"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+             }
+            }
             FrameWidgetClass FrameWidget8 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.12
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -11775,7 +12203,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget9 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.12
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -12050,7 +12478,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget10 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -12409,7 +12837,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -12715,7 +13143,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget12 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.15
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -13026,7 +13454,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget13 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.14
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -13299,7 +13727,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget14 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.12
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -13534,7 +13962,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget15 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.12
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -13824,7 +14252,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget16 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -14135,7 +14563,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget17 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.14
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -14411,7 +14839,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget18 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -14702,7 +15130,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget19 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -15007,7 +15435,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget110 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.3
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -15078,7 +15506,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget111 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.27
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -15349,7 +15777,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget112 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -15626,7 +16054,63 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 0
                vexactsize 0
-               text "#STR_Controls_CombineSplit"
+               text "#STR_Controls_Combine"
+               font "gui/fonts/sdf_MetronLight24"
+               "exact text" 1
+               "exact text size" 22
+               "size to text h" 0
+               "size to text v" 1
+               "text valign" center
+               wrap 1
+              }
+             }
+            }
+            GridSpacerWidgetClass PanelWidget12126 {
+             visible 1
+             clipchildren 1
+             ignorepointer 1
+             color 0 0 0 1
+             size 1 1
+             valign center_ref
+             hexactpos 0
+             vexactpos 0
+             hexactsize 0
+             vexactsize 0
+             scaled 1
+             style DayZDefaultPanel
+             Padding 5
+             Margin 5
+             "Size To Content H" 1
+             "Size To Content V" 1
+             content_halign right
+             content_valign center
+             Columns 2
+             Rows 1
+             {
+              ImageWidgetClass ImageWidget12126 {
+               ignorepointer 1
+               size 38 38
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 1
+               vexactsize 1
+               image0 "set:playstation_buttons image:cross"
+               mode blend
+               "src alpha" 1
+               stretch 0
+              }
+              MultilineTextWidgetClass TextWidget12126 {
+               visible 1
+               ignorepointer 1
+               size 1 1
+               halign center_ref
+               valign center_ref
+               hexactpos 0
+               vexactpos 0
+               hexactsize 0
+               vexactsize 0
+               text "#action_target_cursor_hold #STR_Controls_Split"
                font "gui/fonts/sdf_MetronLight24"
                "exact text" 1
                "exact text size" 22
@@ -15640,7 +16124,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget113 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -15929,7 +16413,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget114 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.28
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -16000,7 +16484,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget115 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.19
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -16275,7 +16759,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget116 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -16552,7 +17036,7 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 0
                vexactsize 0
-               text "#STR_Controls_Combine"
+               text "#action_target_cursor_hold #STR_Controls_Combine"
                font "gui/fonts/sdf_MetronLight24"
                "exact text" 1
                "exact text size" 22
@@ -16622,7 +17106,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget117 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -16864,21 +17348,10 @@ PanelWidgetClass rootFrame {
               }
              }
             }
-            FrameWidgetClass FrameWidget118 {
-             ignorepointer 1
-             position 0 0
-             size 0.1 0.15
-             halign center_ref
-             valign center_ref
-             hexactpos 0
-             vexactpos 0
-             hexactsize 0
-             vexactsize 0
-            }
             FrameWidgetClass FrameWidget119 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.17
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -17154,7 +17627,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1110 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -17334,7 +17807,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1111 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -17405,7 +17878,7 @@ PanelWidgetClass rootFrame {
        }
       }
       FrameWidgetClass PSCarsOld {
-       visible 0
+       visible 1
        ignorepointer 1
        position 0 0
        size 1 1
@@ -17478,7 +17951,7 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 0
                vexactsize 0
-               text "#STR_Controls_Brake"
+               text "#STR_Controls_Brake #action_target_cursor_hold"
                font "gui/fonts/sdf_MetronLight24"
                "exact text" 1
                "exact text size" 22
@@ -17505,21 +17978,10 @@ PanelWidgetClass rootFrame {
               }
              }
             }
-            FrameWidgetClass FrameWidget1112 {
-             ignorepointer 1
-             position 0 0
-             size 0.1 0.05
-             halign center_ref
-             valign center_ref
-             hexactpos 0
-             vexactpos 0
-             hexactsize 0
-             vexactsize 0
-            }
             FrameWidgetClass FrameWidget1113 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.28
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -17724,7 +18186,7 @@ PanelWidgetClass rootFrame {
                vexactpos 0
                hexactsize 0
                vexactsize 0
-               text "#STR_Controls_Accelerate"
+               text "#action_target_cursor_hold #STR_Controls_Accelerate"
                font "gui/fonts/sdf_MetronLight24"
                "exact text" 1
                "exact text size" 22
@@ -17794,7 +18256,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1114 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -17973,7 +18435,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1115 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.05
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -18254,7 +18716,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1116 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.06
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -18652,7 +19114,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget1118 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.17
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -18985,7 +19447,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11110 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.09
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -19436,7 +19898,7 @@ PanelWidgetClass rootFrame {
             FrameWidgetClass FrameWidget11112 {
              ignorepointer 1
              position 0 0
-             size 0.1 0.2
+             size 0.1 0.045
              halign center_ref
              valign center_ref
              hexactpos 0
@@ -20175,7 +20637,7 @@ PanelWidgetClass rootFrame {
        hexactsize 0
        vexactsize 1
        text "change preset text"
-       font "gui/fonts/sdf_MetronLight24"
+       font "gui/fonts/sdf_MetronLight42"
        "italic text" 0
        "exact text" 1
        "exact text size" 22
@@ -20197,7 +20659,7 @@ PanelWidgetClass rootFrame {
        vexactsize 1
        priority 1
        text "#layout_console_inventory_toolbar_context"
-       font "gui/fonts/sdf_MetronLight24"
+       font "gui/fonts/sdf_MetronLight42"
        "italic text" 0
        "exact text" 1
        "exact text size" 22

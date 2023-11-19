@@ -20,9 +20,10 @@ class Plastic_Explosive : ExplosivesBase
 	
 	override void EOnInit(IEntity other, int extra)
 	{
-		LockTriggerSlots();
+		if (!g_Game.IsMultiplayer())
+			LockTriggerSlots();
 	}
-
+	
 	//! special behaviour - do not call super from ExplosivesBase
 	override void EEKilled(Object killer)	
 	{
@@ -43,6 +44,32 @@ class Plastic_Explosive : ExplosivesBase
 	override void UnlockTriggerSlots()
 	{
 		GetInventory().SetSlotLock(InventorySlots.GetSlotIdFromString(SLOT_TRIGGER), false);
+	}
+	
+	override bool OnStoreLoad(ParamsReadContext ctx, int version)
+	{
+		if (!super.OnStoreLoad(ctx, version))
+			return false;
+
+		if (version <= 134) // up to 1.21
+		{
+			int slotId = InventorySlots.GetSlotIdFromString(SLOT_TRIGGER);
+			bool locked = GetInventory().GetSlotLock(slotId);
+			while (locked)
+			{
+				GetInventory().SetSlotLock(slotId, false);
+				locked = GetInventory().GetSlotLock(slotId);
+			}
+		}
+		
+		return true;
+	}
+	
+	override void OnStoreSave(ParamsWriteContext ctx)
+	{
+		super.OnStoreSave(ctx);
+		
+		LockTriggerSlots();
 	}
 
 	override void OnVariablesSynchronized()
@@ -66,31 +93,6 @@ class Plastic_Explosive : ExplosivesBase
 		{
 			m_RAIB.Pair();
 		}
-	}
-	
-	override bool CanPutInCargo( EntityAI parent )
-	{
-		if ( !super.CanPutInCargo(parent) )
-		{
-			return false;
-		}
-
-		return IsTakeable();
-	}
-	
-	override bool CanPutIntoHands(EntityAI parent)
-	{
-		if (!super.CanPutIntoHands(parent))
-		{
-			return false;
-		}
-
-		return IsTakeable();
-	}
-
-	override bool CanRemoveFromHands(EntityAI parent)
-	{
-		return IsTakeable();
 	}
 	
 	override bool CanReceiveAttachment(EntityAI attachment, int slotId)
@@ -210,16 +212,7 @@ class Plastic_Explosive : ExplosivesBase
 		m_RAIB.Pair(trigger);
 	}
 	
-	override void UnpairRemote()
-	{
-		if (GetPairDevice())
-		{
-			GetPairDevice().UnpairRemote();
-		}
 
-		m_RAIB.Unpair();
-	}
-	
 	override EntityAI GetPairDevice()
 	{
 		return m_RAIB.GetPairDevice();
@@ -303,24 +296,16 @@ class Plastic_Explosive : ExplosivesBase
 	{
 		super.EEItemAttached(item, slot_name);
 
-		switch (slot_name)
-		{
-		case SLOT_TRIGGER:
+		if (slot_name == SLOT_TRIGGER)
 			OnTriggerAttached(item);
-		break;
-		}
 	}
 	
 	override void EEItemDetached(EntityAI item, string slot_name)
 	{
 		super.EEItemDetached(item, slot_name);
 
-		switch (slot_name)
-		{
-		case SLOT_TRIGGER:
+		if (slot_name == SLOT_TRIGGER)
 			OnTriggerDetached(item);
-		break;
-		}
 	}
 	
 	override void UpdateLED(int pState)
@@ -364,6 +349,22 @@ class Plastic_Explosive : ExplosivesBase
 		{
 			SetAnimationPhase(ANIM_PHASE_TRIGGER_REMOTE, 1.0);
 		}
+	}
+	
+	
+	override string GetDeploySoundset()
+	{
+		return "placeImprovisedExplosive_SoundSet";
+	}
+	
+	override string GetLoopDeploySoundset()
+	{
+		return "improvisedexplosive_deploy_SoundSet";
+	}
+	
+	override protected bool UsesGlobalDeploy()
+	{
+		return true;
 	}
 }
 

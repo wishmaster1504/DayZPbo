@@ -26,6 +26,14 @@ class ActionDigInStash: ActionContinuousBase
 		m_ConditionItem		= new CCINonRuined();
 	}
 	
+	override bool Can(PlayerBase player, ActionTarget target, ItemBase item, int condition_mask)
+	{
+		if (!super.Can(player, target, item, condition_mask))
+			return false;
+		
+		return player.CheckFreeSpace(vector.Forward, 1.0, false);
+	}
+	
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
 		ItemBase targetIB;
@@ -53,7 +61,7 @@ class ActionDigInStash: ActionContinuousBase
 
 			//! was initialized from inventory?
 			EntityAI entityToCheck = targetIB;
-			if (targetIB.GetInventory().IsInCargo());
+			if (targetIB.GetInventory().IsInCargo())
 				entityToCheck = player;
 			
 			// here we check if a stash is nearby and block digging a new one in close proximity
@@ -76,7 +84,6 @@ class ActionDigInStash: ActionContinuousBase
 			int liquidType;
 			string surfaceType;
 			GetGame().SurfaceUnderObject(entityToCheck, surfaceType, liquidType);
-			
 			if (!GetGame().IsSurfaceDigable(surfaceType))
 			{
 				return false;

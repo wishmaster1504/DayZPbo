@@ -25,6 +25,8 @@ class Icon: LayoutHolder
 	
 	protected Widget				m_ColorWidget;
 	protected Widget				m_SelectedPanel;
+	protected Widget				m_MicromanagedPanel;
+	protected Widget				m_CursorWidget;
 	
 	protected Widget				m_QuantityPanel;
 	protected TextWidget			m_QuantityItem;
@@ -40,12 +42,14 @@ class Icon: LayoutHolder
 	void Icon( LayoutHolder parent, bool hands_icon = false )
 	{
 		m_HandsIcon = hands_icon;
-		ItemManager.GetInstance().SetSelectedItem( null, null, null, null );
+		ItemManager.GetInstance().SetSelectedItemEx(null, null, null);
 		
 		m_ItemPreview		= ItemPreviewWidget.Cast( GetMainWidget().FindAnyWidget( "Render" ) );
 		
 		m_ColorWidget		= GetMainWidget().FindAnyWidget( "Color" );
 		m_SelectedPanel		= GetMainWidget().FindAnyWidget( "Selected" );
+		m_MicromanagedPanel	= GetMainWidget().FindAnyWidget( "Micromanaged" );
+		m_CursorWidget		= GetMainWidget().FindAnyWidget( "Cursor" );
 		
 		m_QuantityPanel		= GetMainWidget().FindAnyWidget( "QuantityPanel" );
 		m_QuantityItem		= TextWidget.Cast( GetMainWidget().FindAnyWidget( "Quantity" ) );
@@ -79,6 +83,16 @@ class Icon: LayoutHolder
 	Widget GetSelectedWidget()
 	{
 		return m_SelectedPanel;
+	}
+	
+	Widget GetCursorWidget()
+	{
+		return m_CursorWidget;
+	}
+	
+	Widget GetMicromanagedPanel()
+	{
+		return m_MicromanagedPanel;
 	}
 
 	bool IsDragged()
@@ -134,7 +148,7 @@ class Icon: LayoutHolder
 
 	void DoubleClick(Widget w, int x, int y, int button)
 	{
-		if( button == MouseState.LEFT )
+		if( button == MouseState.LEFT && !g_Game.IsLeftCtrlDown())
 		{
 			PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
 			if( player.GetInventory().HasInventoryReservation( m_Obj, null ) || player.GetInventory().IsInventoryLocked() || player.IsItemsToDelete() )
@@ -368,7 +382,7 @@ class Icon: LayoutHolder
 		if( !m_IsDragged )
 		{
 			PrepareOwnedTooltip( m_Obj, x, y );
-			m_SelectedPanel.Show( true );
+			m_CursorWidget.Show( true );
 		}
 		
 		return true;
@@ -379,7 +393,7 @@ class Icon: LayoutHolder
 		HideOwnedTooltip();
 		if( !m_IsDragged )
 		{
-			m_SelectedPanel.Show( false );
+			m_CursorWidget.Show( false );
 		}
 		return true;
 	}
@@ -636,7 +650,7 @@ class Icon: LayoutHolder
 	void ShowActionMenuCombine( EntityAI entity1, EntityAI entity2, int combinationFlags, Widget w , bool color_test )
 	{
 		int current_flag;
-		ContextMenu cmenu = GetGame().GetUIManager().GetMenu().GetContextMenu();
+		ContextMenu cmenu = ContextMenu.Cast(GetGame().GetUIManager().GetMenu().GetContextMenu());
 		m_am_entity1 = entity1;
 		m_am_entity2 = entity2;
 		cmenu.Hide();
@@ -800,7 +814,7 @@ class Icon: LayoutHolder
 	bool FlagAction( EntityAI entity1, EntityAI entity2, int combinationFlags )
 	{
 		int current_flag;
-		ContextMenu cmenu = GetGame().GetUIManager().GetMenu().GetContextMenu();
+		ContextMenu cmenu = ContextMenu.Cast(GetGame().GetUIManager().GetMenu().GetContextMenu());
 		m_am_entity1 = entity1;
 		m_am_entity2 = entity2;
 		cmenu.Hide();
@@ -1259,8 +1273,8 @@ class Icon: LayoutHolder
 			FullScreen();
 		}
 		
-		m_SelectedPanel.SetColor( ARGBF( 1, 1, 1, 1 ) );
-		m_SelectedPanel.Show( false );
+		m_CursorWidget.SetColor( ARGBF( 1, 1, 1, 1 ) );
+		m_CursorWidget.Show( false );
 
 		InventoryMenu menu = InventoryMenu.Cast( GetGame().GetUIManager().FindMenu( MENU_INVENTORY ) );
 		
@@ -1295,7 +1309,7 @@ class Icon: LayoutHolder
 			m_ColorWidget.SetAlpha( 0.1 );
 		}
 		
-		m_SelectedPanel.Show( true );
+		m_CursorWidget.Show( true );
 	}
 
 	void OnDraggingOverBackground( Widget w, int x, int y, Widget reciever  )

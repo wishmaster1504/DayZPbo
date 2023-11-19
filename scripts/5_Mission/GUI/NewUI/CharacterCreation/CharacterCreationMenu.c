@@ -357,7 +357,7 @@ class CharacterCreationMenu extends UIScriptedMenu
 			break;
 			
 			case TOOLTIP_ID_SAVE:
-				tooltip_header = "#layout_character_creation_save_character";
+				tooltip_header = "#layout_character_creation_save_character_alt";
 				tooltip_text = "#layout_character_creation_save_tooltip";
 			break;
 		}
@@ -388,7 +388,7 @@ class CharacterCreationMenu extends UIScriptedMenu
 				break;
 				
 				case TOOLTIP_ID_SAVE:
-					tooltip_header = "#layout_character_creation_save_character";
+					tooltip_header = "#layout_character_creation_save_character_alt";
 					tooltip_text = "#layout_character_creation_save_tooltip";
 				break;
 			}
@@ -721,11 +721,10 @@ class CharacterCreationMenu extends UIScriptedMenu
 	{
 		#ifdef PLATFORM_CONSOLE
 		RichTextWidget toolbar_text = RichTextWidget.Cast(layoutRoot.FindAnyWidget("ContextToolbarText"));
-		//order: save - randomize - select - back
 		string text = "";
 		if (!m_CharacterSaved && m_Scene.GetIntroCharacter().IsDefaultCharacter()) //can be saved..
 		{
-			text += string.Format(" %1",InputUtils.GetRichtextButtonIconFromInputAction("UAUICtrlY", "#layout_character_creation_save_character", EUAINPUT_DEVICE_CONTROLLER, InputUtils.ICON_SCALE_TOOLBAR));
+			text += string.Format(" %1",InputUtils.GetRichtextButtonIconFromInputAction("UAUICtrlY", "#layout_character_creation_save_character_alt", EUAINPUT_DEVICE_CONTROLLER, InputUtils.ICON_SCALE_TOOLBAR));
 		}
 		text += string.Format(" %1",InputUtils.GetRichtextButtonIconFromInputAction("UAUICtrlX", "#layout_character_creation_toolbar_randomize", EUAINPUT_DEVICE_CONTROLLER, InputUtils.ICON_SCALE_TOOLBAR));
 		if (m_Scene.GetIntroCharacter().IsDefaultCharacter()) //edit options available

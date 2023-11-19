@@ -130,7 +130,7 @@ FrameWidgetClass settings_menu_root {
              vexactsize 0
              priority 250
              text "#STR_settings_menu_root_Tabber_TabControls_TabBar_Tab_Control_Container_Tab_Control_0_Tab_Control_0_Title0"
-             font "gui/fonts/sdf_MetronLight72"
+             font "gui/fonts/sdf_MetronLight24"
              "text halign" center
              "text valign" center
             }
@@ -187,7 +187,7 @@ FrameWidgetClass settings_menu_root {
              vexactsize 0
              priority 250
              text "#STR_settings_menu_root_Tabber_TabControls_TabBar_Tab_Control_Container_Tab_Control_1_Tab_Control_1_Title0"
-             font "gui/fonts/sdf_MetronLight72"
+             font "gui/fonts/sdf_MetronLight24"
              "text halign" center
              "text valign" center
             }
@@ -244,7 +244,7 @@ FrameWidgetClass settings_menu_root {
              vexactsize 0
              priority 250
              text "#STR_settings_menu_root_Tabber_TabControls_TabBar_Tab_Control_Container_Tab_Control_2_Tab_Control_2_Title0"
-             font "gui/fonts/sdf_MetronLight72"
+             font "gui/fonts/sdf_MetronLight24"
              "text halign" center
              "text valign" center
             }
@@ -301,7 +301,7 @@ FrameWidgetClass settings_menu_root {
              vexactsize 0
              priority 250
              text "#STR_settings_menu_root_Tabber_TabControls_TabBar_Tab_Control_Container_Tab_Control_3_Tab_Control_3_Title0"
-             font "gui/fonts/sdf_MetronLight72"
+             font "gui/fonts/sdf_MetronLight24"
              "text halign" center
              "text valign" center
             }

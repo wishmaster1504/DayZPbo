@@ -1,4 +1,4 @@
-class PowerGenerator extends ItemBase
+class PowerGeneratorBase extends ItemBase
 {
 	float						m_Fuel;
 	private static float		m_FuelTankCapacity; // Capacity in ml.
@@ -24,7 +24,7 @@ class PowerGenerator extends ItemBase
 	protected ref UniversalTemperatureSourceLambdaEngine m_UTSLEngine;
 	
 	// Constructor
-	void PowerGenerator()	
+	void PowerGeneratorBase()	
 	{
 		SetEventMask(EntityEvent.INIT); // Enable EOnInit event
 		
@@ -34,7 +34,7 @@ class PowerGenerator extends ItemBase
 		RegisterNetSyncVariableBool("m_IsPlaceSound");
 	}
 	
-	void ~PowerGenerator()
+	void ~PowerGeneratorBase()
 	{
 		SEffectManager.DestroyEffect(m_Smoke);
 	}
@@ -208,6 +208,7 @@ class PowerGenerator extends ItemBase
 	override void EEItemAttached(EntityAI item, string slot_name)
 	{
 		super.EEItemAttached(item, slot_name);
+		GetCompEM().InteractBranch(this);
 		
 		ItemBase item_IB = ItemBase.Cast(item);
 		
@@ -225,6 +226,8 @@ class PowerGenerator extends ItemBase
 	override void EEItemDetached(EntityAI item, string slot_name)
 	{
 		super.EEItemDetached(item, slot_name);
+		
+		GetCompEM().InteractBranch(this);
 		
 		ItemBase item_IB = ItemBase.Cast(item);
 		
@@ -269,7 +272,7 @@ class PowerGenerator extends ItemBase
 			DPrint(error);
 		}
 	}
-
+	
 	// Adds fuel (energy) to the generator
 	// Returns how much fuel was accepted
 	float AddFuel(float available_fuel)
@@ -278,7 +281,7 @@ class PowerGenerator extends ItemBase
 		{
 			return 0;
 		}
-		
+		GetCompEM().InteractBranch(this);
 		float needed_fuel = GetMaxFuel() - GetFuel();
 		
 		if (needed_fuel > available_fuel)
@@ -382,4 +385,11 @@ class PowerGenerator extends ItemBase
 		
 		SetFuel(GetMaxFuel());
 	}
+}
+
+
+class PowerGenerator extends PowerGeneratorBase
+{
+
+
 }

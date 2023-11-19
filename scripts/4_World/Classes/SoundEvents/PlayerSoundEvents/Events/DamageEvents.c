@@ -12,7 +12,7 @@ class DamageSoundEvents extends PlayerSoundEventBase
 		return true;
 	}
 	
-	override bool HasPriorityOverCurrent(PlayerBase player, EPlayerSoundEventID other_state_id,EPlayerSoundEventType type_other )
+	override bool HasPriorityOverCurrent(PlayerBase player, EPlayerSoundEventID other_state_id, EPlayerSoundEventType type_other)
 	{
 		return true;
 	}

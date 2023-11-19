@@ -337,7 +337,7 @@ WindowWidgetClass server_browser_tab_root {
          }
         }
         FrameWidgetClass server_list_content_header_slots {
-         visible 1
+         visible 0
          clipchildren 0
          ignorepointer 0
          size 120 1

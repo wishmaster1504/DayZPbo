@@ -1,0 +1,18 @@
+MetaFileClass {
+ Name "{495258C347B88402}Graphics/Particles/sprites/Fireworks_For10anim_cont.edds"
+ Author "3643"
+ ChangeDate -448991444
+ Configurations {
+  TGAResourceClass PC {
+   SourceFile "Fireworks_For10anim_cont.tga"
+   FormatCompress Medium
+   Conversion DXTCompression
+  }
+  TGAResourceClass XBOX_ONE : PC {
+  }
+  TGAResourceClass PS4 : PC {
+  }
+  TGAResourceClass LINUX : PC {
+  }
+ }
+}

@@ -71,6 +71,12 @@ class ServerBrowserFavoritesTabConsolePages extends ServerBrowserTabConsolePages
 			array<string> parts = new array<string>;
 			favServerId.Split(":", parts);
 			
+			// ensure server id has correct format
+			if (parts.Count() != 2)
+			{
+				continue;
+			}
+			
 			GetServersResultRow offlineRow = new GetServersResultRow();
 			offlineRow.m_Name = favServerId;
 			offlineRow.m_Id = favServerId;
@@ -80,8 +86,8 @@ class ServerBrowserFavoritesTabConsolePages extends ServerBrowserTabConsolePages
 			offlineRow.m_Favorite = true;
 			
 			ServerBrowserEntry entry = GetServerEntryByIndex( index );
-			entry.FillInfo(offlineRow);
 			entry.SetIsOnline(false);
+			entry.FillInfo(offlineRow);
 			entry.UpdateEntry();
 			
 			m_EntryWidgets.Insert(favServerId, entry);

@@ -1,0 +1,18 @@
+MetaFileClass {
+ Name "{725AA8553AB37FC0}Graphics/Particles/sprites/Fireworks_Years_anim.edds"
+ Author "3643"
+ ChangeDate -415437012
+ Configurations {
+  TGAResourceClass PC {
+   SourceFile "Fireworks_Years_anim.tga"
+   FormatCompress Medium
+   Conversion DXTCompression
+  }
+  TGAResourceClass XBOX_ONE : PC {
+  }
+  TGAResourceClass PS4 : PC {
+  }
+  TGAResourceClass LINUX : PC {
+  }
+ }
+}

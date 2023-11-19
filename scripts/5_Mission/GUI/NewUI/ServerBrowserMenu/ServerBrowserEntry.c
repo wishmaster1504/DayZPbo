@@ -272,7 +272,7 @@ class ServerBrowserEntry extends ScriptedWidgetEventHandler
 		
 		SetName( server_info.m_Name );
 		SetPasswordLocked( server_info.m_IsPasswordProtected );
-		SetPopulation( server_info.m_CurrentNumberPlayers, server_info.m_MaxPlayers );
+		SetPopulationEx( server_info );
 		SetSlots( server_info.m_MaxPlayers );
 		SetPing( server_info.m_Ping );
 		SetTime( server_info.m_TimeOfDay, server_info.m_EnvironmentTimeMul );
@@ -330,37 +330,75 @@ class ServerBrowserEntry extends ScriptedWidgetEventHandler
 		m_ServerLock.Show( locked );
 	}
 	
+	// DEPRECATED
 	void SetPopulation( int population, int slots )
 	{
-		string pop_text	= "#server_browser_entry_empty";
+		int color = ARGBF(1, 1, 1, 1);
+		string pop_text = population.ToString() + "/" + slots.ToString();
 		
 		if ( slots > 0 )
 		{
 			float pop_percentage = population / slots;
 
-			if ( population == 0 )
-				pop_text	= "#server_browser_entry_empty";
-			else if ( pop_percentage < 0.33 )
-				pop_text	= "#server_browser_entry_low";
-			else if ( pop_percentage < 0.66 )
-				pop_text	= "#server_browser_entry_medium";
-			else if ( pop_percentage != 1 )
-				pop_text	= "#server_browser_entry_high";
-			else
-				pop_text	= "#server_browser_entry_full";
+			if (pop_percentage >= 1)
+				color	= ARGBF( 1, 1, 0, 0 );
+			else if ( pop_percentage >= 0.8 )
+				color	= ARGBF( 1, 1, 0.5, 0 );
 		}
 
-		m_ServerPopulation.SetText( pop_text );
+		m_ServerPopulation.SetText(pop_text);
+		m_ServerPopulation.SetColor(color);
+		m_ServerPopulation.SetBold(true);
+		m_ServerPopulation.SetOutline(1);
+		
+	}
+	
+	private void SetPopulationEx(GetServersResultRow serverInfo)
+	{		
+		string popText = "";
+		int population = serverInfo.m_CurrentNumberPlayers;
+		int maxPlayers = serverInfo.m_MaxPlayers;
+		int playersInQueue = serverInfo.m_PlayersInQueue;
+		
+		if (IsOnline())
+		{
+			// sometimes servers report a queue size even though server isn't full,
+			// in which case we ignore queue size
+			if (playersInQueue > 0 && population == maxPlayers)
+			{
+				popText = population.ToString() + "+" + playersInQueue.ToString() + "/" + maxPlayers.ToString();
+			}
+			else
+			{
+				popText = population.ToString() + "/" + maxPlayers.ToString();
+			}
+		}
+		
+		else
+		{
+			popText = "-";
+		}
+
+		m_ServerPopulation.SetText(popText);
 	}
 	
 	void SetSlots( int slots )
 	{
-		m_ServerSlots.SetText( slots.ToString() );
+		if (IsOnline())
+		{
+			m_ServerSlots.SetText( slots.ToString() );
+		}
+		else
+		{
+			m_ServerSlots.SetText("-");
+		}
 	}
 	
 	void SetPing( int ping )
 	{
 		int color;
+		string displayValue;
+		
 		if ( ping < 50 )
 			color	= ARGBF( 1, 0, 1, 0 );
 		else if( ping < 100 )
@@ -370,8 +408,18 @@ class ServerBrowserEntry extends ScriptedWidgetEventHandler
 		else
 			color	= ARGBF( 1, 1, 0, 0 );
 		
+		if (IsOnline())
+		{
+			displayValue = ping.ToString();
+		}
+		
+		else
+		{
+			displayValue = "-";
+		}
+		
 		m_ServerPing.SetColor( color );
-		m_ServerPing.SetText( ping.ToString() );
+		m_ServerPing.SetText( displayValue );
 	}
 	
 	void SetTime( string time, float multiplier )
@@ -426,9 +474,14 @@ class ServerBrowserEntry extends ScriptedWidgetEventHandler
 	
 	void SetMapName( string mapName )
 	{
+		RefreshDLCIcon();
+	}
+	
+	void RefreshDLCIcon()
+	{
 		if ( m_ServerData.m_IsDLC )
 		{
-			bool own = GetGame().VerifyWorldOwnership( mapName );
+			bool own = GetGame().VerifyWorldOwnership( GetMapToRun() );
 			m_ServerModIcon.Show( true );
 			m_ServerModIcon.FindWidget( "Owned" ).Show( own );
 			m_ServerModIcon.FindWidget( "Unowned" ).Show( !own );
@@ -438,11 +491,6 @@ class ServerBrowserEntry extends ScriptedWidgetEventHandler
 			m_ServerModIcon.FindWidget( "Owned" ).Show( false );
 			m_ServerModIcon.FindWidget( "Unowned" ).Show( false );
 		}
-/*
-		#ifdef PLATFORM_WINDOWS
-		m_ServerMods.SetText( "#STR_USRACT_MAP" + ": " + GetMapName() );
-		#endif
-*/		
 	}
 	
 	void SetCharacterAlive( string char_alive )
@@ -676,36 +724,51 @@ class ServerBrowserEntry extends ScriptedWidgetEventHandler
 	void UpdateColors()
 	{
 		float alpha = 1;
-		if (!IsOnline())
-		{
-			alpha = 0.5;
-			m_ServerPopulation.SetText("-");
-			m_ServerSlots.SetText("-");			
-			m_ServerPing.SetText("-");
-			m_ServerPing.SetColor( ARGB( 255, 255, 255, 255) );
-		}
+		int maxPlayers = m_ServerData.m_MaxPlayers;
+		int whiteColor = ARGBF(1, 1, 1, 1);
+		int populationColor = whiteColor;
+		int populationOutline = 1;
 		
-#ifndef PLATFORM_CONSOLE
-		if (!IsOnline())
-		{
-			m_ServerTime.Show(false);
-			m_Expand.Show(false);
+		if (IsOnline())
+		{	
+			if ( maxPlayers > 0 )
+			{
+				int population = m_ServerData.m_CurrentNumberPlayers;
+				float pop_percentage = population / maxPlayers;
+	
+				if (pop_percentage >= 1)
+				{
+					populationColor	= ARGBF( 1, 1, 0, 0 );
+				}
+				else if ( pop_percentage >= 0.8 )
+				{
+					populationColor	= ARGBF( 1, 1, 0.5, 0 );
+				}
+			}
 		}
 		
 		else
 		{
-			m_ServerTime.Show(true);
-			m_Expand.Show(true);
+			alpha = 0.5;
+			populationOutline = 0;
+						
+			m_ServerPing.SetColor(whiteColor);
 		}
-#endif
 		
-		m_Root.SetAlpha(alpha);
+		m_ServerTime.Show(IsOnline());
+		m_ServerName.SetColor(whiteColor);
+		m_ServerName.SetAlpha(alpha);
+		m_ServerPopulation.SetBold(IsOnline());
+		m_ServerPopulation.SetColor(populationColor);
+		m_ServerPopulation.SetOutline(populationOutline);
 		m_ServerPopulation.SetAlpha(alpha);
 		m_ServerSlots.SetAlpha(alpha);
 		m_ServerPing.SetAlpha(alpha);
+		m_Root.SetAlpha(alpha);
 		
-		m_ServerName.SetColor( ARGB( 255, 255, 255, 255) );
-		m_ServerName.SetAlpha(alpha);
+#ifndef PLATFORM_CONSOLE
+		m_Expand.Show(IsOnline());
+#endif
 	}
 	
 	//Coloring functions (Until WidgetStyles are useful)
@@ -737,12 +800,15 @@ class ServerBrowserEntry extends ScriptedWidgetEventHandler
 		if ( w == m_Root || w == m_Favorite || w == m_Expand )
 		{
 			m_Root.SetColor( ARGB( 255, 200, 0, 0) );
+			SetPopulationEx(m_ServerData);
 			UpdateColors();
 		}
 	}
 	
 	void Lighten( Widget w, Widget enterW, int x, int y )
 	{
+		float alpha = 0.3;
+		
 		if ( GetFocus() == w || m_Selected )
 		{
 			return;
@@ -754,9 +820,9 @@ class ServerBrowserEntry extends ScriptedWidgetEventHandler
 		}
 
 		m_Root.SetColor( ARGB( 255, 0, 0, 0) );			
-		UpdateColors();		
+		SetPopulationEx(m_ServerData);
+		UpdateColors();
 		
-		float alpha = 0.3;
 		if ( m_Index % 2 )
 		{
 			alpha = 0;

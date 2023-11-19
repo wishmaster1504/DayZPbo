@@ -102,11 +102,19 @@ class MissionMainMenu extends MissionBase
 		m_IntroScenePC = null;
 		m_IntroSceneXbox = null;
 		m_CreditsMenu = null;
+#ifndef FEATURE_CURSOR
 		g_Game.GetUIManager().ShowUICursor(false);
+#endif
 	}
 
 	override void OnUpdate(float timeslice)
 	{
+		super.OnUpdate(timeslice);
+		
+#ifdef DIAG_DEVELOPER
+		UpdateInputDeviceDiag();
+#endif
+		
 		if ( g_Game.IsLoading() )
 		{
 			return;
@@ -134,33 +142,6 @@ class MissionMainMenu extends MissionBase
 		if (m_CreditsMenu)
 		{
 			m_CreditsMenu.UpdateInfoPanelText(device);
-		}
-	}
-	
-	override void OnKeyRelease(int key)
-	{
-		super.OnKeyRelease(key);
-		
-		if ( key == KeyCode.KC_Q )
-		{
-			/*
-			array<int> list = new  array<int>();
-			
-			Print("Start--------");
-			list.Debug();
-			
-			int i = 0;
-			while ( i < 20 )
-			{
-				SortedInsert(list, Math.RandomIntInclusive(0, 20));
-				i += 1;
-			}
-			
-			
-			
-			Print("End--------");
-			list.Debug();
-			*/
 		}
 	}
 	

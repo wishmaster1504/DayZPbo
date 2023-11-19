@@ -124,6 +124,9 @@ class ScriptInputUserData : ParamsWriteContext
 
 	proto native void Reset ();
 	proto native void Send ();
+
+	proto native bool CopyFrom(ParamsReadContext other);
+
 	proto native static bool CanStoreInputUserData ();
 };
 
@@ -350,15 +353,15 @@ class PlayerIdentityBase : Managed
 	proto int GetBandwidthAvg();
 	
 	//! nick (short) name of player
-	proto string GetName();
+	proto owned string GetName();
 	//! nick without any processing
-	proto string GetPlainName();
+	proto owned string GetPlainName();
 	//! full name of player
-	proto string GetFullName();
+	proto owned string GetFullName();
 	//! unique id of player (hashed steamID, database Xbox id...) can be used in database or logs
-	proto string GetId();
+	proto owned string GetId();
 	//! plaintext unique id of player (cannot be used in database or logs)
-	proto string GetPlainId();
+	proto owned string GetPlainId();
 	//! id of player in one session (is reused after player disconnects)
 	proto int GetPlayerId();
 	
@@ -651,6 +654,7 @@ class Hud : Managed
 	void ShowHudUI(bool show);
 	void ShowHudInventory(bool show);
 	void ShowQuickBar(bool show);
+	void UpdateQuickbarGlobalVisibility();
 	void ShowHud(bool show);
 	
 	void OnResizeScreen();
@@ -673,13 +677,19 @@ class Mission
 	protected ref ScriptInvoker m_OnInputPresetChanged = new ScriptInvoker();
 	protected ref ScriptInvoker m_OnInputDeviceConnected = new ScriptInvoker();
 	protected ref ScriptInvoker m_OnInputDeviceDisconnected = new ScriptInvoker();
+	protected ref ScriptInvoker m_OnModMenuVisibilityChanged = new ScriptInvoker();
 
 	private void ~Mission();
 	
 	void OnInit()	{}
 	void OnMissionStart() {}
 	void OnMissionFinish()	{}
-	void OnUpdate(float timeslice) {}
+	void OnUpdate(float timeslice)
+	{
+#ifdef FEATURE_CURSOR
+		m_TimeStamp++;
+#endif
+	}
 	void OnKeyPress(int key) {}
 	void OnKeyRelease(int key) {}
 	void OnMouseButtonPress(int button){}
@@ -693,6 +703,11 @@ class Mission
 	
 	Hud GetHud()
 	{ 
+		return NULL;
+	}
+
+	ObjectSnapCallback GetInventoryDropCallback()
+	{
 		return NULL;
 	}
 	
@@ -742,6 +757,7 @@ class Mission
 	void StartLogoutMenu(int time) {}
 
 	void CreateDebugMonitor() {}
+	void HideDebugMonitor() {}
 	
 	void RefreshCrosshairVisibility() {}
 
@@ -851,6 +867,21 @@ class Mission
 
 		return m_OnInputDeviceDisconnected;
 	}
+	
+	ScriptInvoker GetOnModMenuVisibilityChanged()
+	{
+		if (!m_OnModMenuVisibilityChanged)
+		{
+			m_OnModMenuVisibilityChanged = new ScriptInvoker;
+		}
+
+		return m_OnModMenuVisibilityChanged;
+	}
+
+#ifdef FEATURE_CURSOR
+	int m_TimeStamp = 0;
+	int GetTimeStamp() { return m_TimeStamp; }
+#endif
 	
 #ifdef DEVELOPER
 	bool m_SuppressNextFrame = true;
@@ -1229,7 +1260,7 @@ enum OptionAccessType
 	AT_OPTIONS_VON_INPUT_MODE
 };
 
-//! Used for script-based game options. For anything C++ based, you would most likely use "Option Access Type" below
+//! Used for script-based game options. For anything C++ based, you would most likely use "Option Access Type" above
 enum OptionIDsScript
 {
 	OPTION_HUD = 100, //starts at 100 to avoid ID conflict with AT_
@@ -1240,7 +1271,8 @@ enum OptionIDsScript
 	OPTION_QUICKBAR,
 	OPTION_SERVER_INFO,
 	OPTION_BLEEDINGINDICATION,
-	OPTION_CONNECTIVITY_INFO
+	OPTION_CONNECTIVITY_INFO,
+	OPTION_HUD_BRIGHTNESS
 };
 
 // -------------------------------------------------------------------------

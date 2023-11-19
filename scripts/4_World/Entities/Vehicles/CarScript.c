@@ -39,6 +39,7 @@ enum ECarHornState
 	SHORT	= 1,
 	LONG	= 2
 }
+
 #ifdef DIAG_DEVELOPER
 enum EVehicleDebugOutputType
 {
@@ -53,7 +54,7 @@ enum EVehicleDebugOutputType
 class CrashDebugData
 {
 	static ref array<ref CrashDebugData> m_CrashData = new array<ref CrashDebugData>;
-	
+	static ref CrashDebugData m_CrashDataPoint;
 	//data is recorded on server, upon request, sent to the client
 	static void SendData(PlayerBase player)
 	{
@@ -69,7 +70,7 @@ class CrashDebugData
 	//this is client requesting to dump the data it previously received from the server
 	static void DumpDataArray(array<ref CrashDebugData> dataArray)
 	{
-		Print("Vehicle; DamageType; Damage; Zone; Momentum; Momentum Previous; Momentum Delta; Speedometer; SpeedWorld; SpeedWorld Previous; SpeedWorld Delta; Velocity; Velocity Previous; Velocity Dot; TimeStamp (ms)");
+		Print("Vehicle; DamageType; Damage; Zone; Momentum; Momentum Prev; Momentum Delta; Speedometer; SpeedWorld; SpeedWorld Prev; SpeedWorld Delta; Velocity; Velocity Prev; Velocity Dot; TimeStamp (ms); CrewDamageBase; ShockTemp; DMGHealth; DMGShock");
 		foreach (CrashDebugData data:dataArray)
 		{
 			DumpData(data);
@@ -78,7 +79,10 @@ class CrashDebugData
 	
 	static void DumpData(CrashDebugData data)
 	{
-		Print(data.m_VehicleType+";"+data.m_DamageType+";"+data.m_Damage+";"+data.m_Zone+";"+data.m_MomentumCurr+";"+data.m_MomentumPrev+";"+data.m_MomentumDelta+";"+data.m_Speedometer+";"+data.m_SpeedWorld+";"+data.m_SpeedWorldPrev+";"+data.m_SpeedWorldDelta+";"+data.m_VelocityCur+";"+data.m_VelocityPrev+";"+data.m_VelocityDot+";"+data.m_Time);
+		string output = data.m_VehicleType+";"+data.m_DamageType+";"+data.m_Damage+";"+data.m_Zone+";"+data.m_MomentumCurr+";"+data.m_MomentumPrev+";"+data.m_MomentumDelta+";"+data.m_Speedometer;
+		output += ";"+data.m_SpeedWorld+";"+data.m_SpeedWorldPrev+";"+data.m_SpeedWorldDelta+";"+data.m_VelocityCur;
+		output += ";"+data.m_VelocityPrev+";"+data.m_VelocityDot+";"+data.m_Time+";"+data.m_CrewDamageBase+";"+data.m_ShockTemp+";"+data.m_DMGHealth+";"+data.m_DMGShock;
+		Print(output);
 	}
 		
 	string m_VehicleType;
@@ -96,6 +100,10 @@ class CrashDebugData
 	vector m_VelocityPrev;
 	float m_VelocityDot;
 	float m_Time;
+	float m_CrewDamageBase;
+	float m_ShockTemp;
+	float m_DMGHealth;
+	float m_DMGShock;
 }
 
 #endif
@@ -114,6 +122,10 @@ class CarContactData
 }
 
 typedef map<string, ref array<ref CarContactData>> CarContactCache
+
+#ifdef DEVELOPER 
+CarScript _car;
+#endif
 
 /*!
 	Base script class for all motorized wheeled vehicles.
@@ -212,6 +224,8 @@ class CarScript extends Car
 	ref EffectSound m_CrashSoundHeavy;
 	ref EffectSound m_WindowSmall;
 	ref EffectSound m_WindowLarge;
+	private ref EffectSound m_PreStartSound;
+
 	protected ref EffectSound m_CarHornSoundEffect;
 	protected ref NoiseParams m_NoisePar;
 	protected NoiseSystem m_NoiseSystem;
@@ -258,6 +272,9 @@ class CarScript extends Car
 
 	protected bool m_EngineZoneReceivedHit;
 	
+	protected ref set<int> m_UnconsciousCrewMemberIndices;
+	protected ref set<int> m_DeadCrewMemberIndices;
+	
 	#ifdef DEVELOPER 
 	private const int DEBUG_MESSAGE_CLEAN_TIME_SECONDS = 10;
 	private float m_DebugMessageCleanTime;
@@ -266,7 +283,11 @@ class CarScript extends Car
 	
 	void CarScript()
 	{
-		SetEventMask(/*EntityEvent.CONTACT |*/ EntityEvent.POSTSIMULATE);
+#ifdef DEVELOPER 
+		_car = this;
+#endif
+
+		SetEventMask(EntityEvent.POSTSIMULATE);
 		
 		m_ContactCache = new CarContactCache;
 		
@@ -288,6 +309,9 @@ class CarScript extends Car
 		m_PlayCrashSoundHeavy = false;
 		
 		m_CarHornState = ECarHornState.OFF;
+		
+		m_UnconsciousCrewMemberIndices 	= new set<int>();
+		m_DeadCrewMemberIndices 		= new set<int>();
 		
 		RegisterNetSyncVariableBool("m_HeadlightsOn");
 		RegisterNetSyncVariableBool("m_BrakesArePressed");
@@ -390,13 +414,16 @@ class CarScript extends Car
 	}
 	
 	#ifdef DIAG_DEVELOPER
-	void Repair()
+	
+	override void FixEntity()
 	{
 		if (GetGame().IsServer())
 		{
 			FillUpCarFluids();
 			//server and single
-			FixEntity();
+			
+			for (int i = 5; i > 0; i--)//there is a problem with wheels when performed only once, this solves it
+				super.FixEntity();
 			if (!GetGame().IsMultiplayer())
 			{
 				//single
@@ -408,7 +435,6 @@ class CarScript extends Car
 			//MP client
 			SEffectManager.DestroyEffect(m_engineFx);	
 		}
-		
 	}
 	#endif
 	
@@ -510,6 +536,80 @@ class CarScript extends Car
 	{
 		SEffectManager.DestroyEffect(sound);
 	}
+
+	override void GetDebugActions(out TSelectableActionInfoArrayEx outputList)
+	{
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_HORN_START_SHORT, "Car Horn Start Short", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_HORN_START_LONG, "Car Horn Start Long", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_HORN_STOP, "Car Horn Stop", FadeColors.LIGHT_GREY));
+
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.SEPARATOR, "Car Fuel", FadeColors.RED));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_FUEL_FULL, "Full", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_FUEL_EMPTY, "Empty", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_FUEL_INCREASE, "10% increase", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_FUEL_DECREASE, "10% decrease", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.SEPARATOR, "___________________________", FadeColors.RED));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.SEPARATOR, "Car Cooler", FadeColors.RED));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_COOLANT_FULL, "Full", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_COOLANT_EMPTY, "Empty", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_COOLANTL_INCREASE, "10% increase", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.CAR_COOLANTL_DECREASE, "10% decrease", FadeColors.LIGHT_GREY));
+		outputList.Insert(new TSelectableActionInfoWithColor(SAT_DEBUG_ACTION, EActions.SEPARATOR, "___________________________", FadeColors.RED));
+		
+		super.GetDebugActions(outputList);
+	}
+	
+	override bool OnAction(int action_id, Man player, ParamsReadContext ctx)
+	{
+		if (super.OnAction(action_id, player, ctx))
+			return true;
+
+		if (!GetGame().IsServer())
+		{
+			return false;
+		}
+
+		switch (action_id)
+		{
+			case EActions.CAR_HORN_START_SHORT:
+				SetCarHornState(ECarHornState.SHORT);
+				return true;
+			case EActions.CAR_HORN_START_LONG:
+				SetCarHornState(ECarHornState.LONG);
+				return true;
+			case EActions.CAR_HORN_STOP:
+				SetCarHornState(ECarHornState.OFF);
+				return true;
+
+			case EActions.CAR_FUEL_FULL:
+				Fill(CarFluid.FUEL, GetFluidCapacity(CarFluid.FUEL));
+				return true;
+			case EActions.CAR_FUEL_EMPTY:
+				LeakAll(CarFluid.FUEL);
+				return true;
+			case EActions.CAR_FUEL_INCREASE:
+				Fill(CarFluid.FUEL, GetFluidCapacity(CarFluid.FUEL) * 0.1);
+				return true;
+			case EActions.CAR_FUEL_DECREASE:
+				Leak(CarFluid.FUEL, GetFluidCapacity(CarFluid.FUEL) * 0.1);
+				return true;
+
+			case EActions.CAR_COOLANT_FULL:
+				Fill(CarFluid.COOLANT, GetFluidCapacity(CarFluid.COOLANT));
+				return true;
+			case EActions.CAR_COOLANT_EMPTY:
+				LeakAll(CarFluid.COOLANT);
+				return true;
+			case EActions.CAR_COOLANTL_INCREASE:
+				Fill(CarFluid.COOLANT, GetFluidCapacity(CarFluid.COOLANT) * 0.1);
+				return true;
+			case EActions.CAR_COOLANTL_DECREASE:
+				Leak(CarFluid.COOLANT, GetFluidCapacity(CarFluid.COOLANT) * 0.1);
+				return true;
+		}
+	
+		return false;
+	}
 	
 	override void OnVariablesSynchronized()
 	{
@@ -545,40 +645,40 @@ class CarScript extends Car
 
 		switch (slot_name)
 		{
-		case "Reflector_1_1":
-			if (GetGame().IsServer())
-			{
-				SetHealth("Reflector_1_1", "Health", item.GetHealth());
-			}
-		break;
-		case "Reflector_2_1":
-			if (GetGame().IsServer())
-			{
-				SetHealth("Reflector_2_1", "Health", item.GetHealth());
-			}
-		break;
-		case "CarBattery":
-		case "TruckBattery":
-			if (GetGame().IsServer())
-			{
-				m_BatteryHealth = item.GetHealth01();
-			}
-		break;
-		case "SparkPlug":
-		case "GlowPlug":
-			if (GetGame().IsServer())
-			{
-				m_PlugHealth = item.GetHealth01();
-			}
-		break;
-		case "CarRadiator":
-			if (GetGame().IsServer())
-			{
-				m_RadiatorHealth = item.GetHealth01();
-			}
-			
-			m_Radiator = item;
-		break;
+			case "Reflector_1_1":
+				if (GetGame().IsServer())
+				{
+					SetHealth("Reflector_1_1", "Health", item.GetHealth());
+				}
+				break;
+			case "Reflector_2_1":
+				if (GetGame().IsServer())
+				{
+					SetHealth("Reflector_2_1", "Health", item.GetHealth());
+				}
+				break;
+			case "CarBattery":
+			case "TruckBattery":
+				if (GetGame().IsServer())
+				{
+					m_BatteryHealth = item.GetHealth01();
+				}
+				break;
+			case "SparkPlug":
+			case "GlowPlug":
+				if (GetGame().IsServer())
+				{
+					m_PlugHealth = item.GetHealth01();
+				}
+				break;
+			case "CarRadiator":
+				if (GetGame().IsServer())
+				{
+					m_RadiatorHealth = item.GetHealth01();
+				}
+				
+				m_Radiator = item;
+				break;
 		}
 		
 		if (GetGame().IsServer())
@@ -692,10 +792,10 @@ class CarScript extends Car
 
 			switch (slotSelectionName)
 			{
-			case "wheel_spare_1":
-			case "wheel_spare_2":
-				return CanManipulateSpareWheel(slotSelectionName);
-			break;
+				case "wheel_spare_1":
+				case "wheel_spare_2":
+					return CanManipulateSpareWheel(slotSelectionName);
+					break;
 			}
 		}
 		
@@ -724,10 +824,10 @@ class CarScript extends Car
 
 			switch (slotSelectionName)
 			{
-			case "wheel_spare_1":
-			case "wheel_spare_2":
-				return CanManipulateSpareWheel(slotSelectionName);
-			break;
+				case "wheel_spare_1":
+				case "wheel_spare_2":
+					return CanManipulateSpareWheel(slotSelectionName);
+					break;
 			}
 		}
 
@@ -745,6 +845,9 @@ class CarScript extends Car
 		
 		if (GetGame().IsServer())
 		{
+			HandleByCrewMemberState(ECrewMemberState.UNCONSCIOUS);
+			HandleByCrewMemberState(ECrewMemberState.DEAD);
+
 			#ifdef DIAG_DEVELOPER
 			if (DEBUG_OUTPUT_TYPE & EVehicleDebugOutputType.CONTACT)
 			{
@@ -1045,20 +1148,20 @@ class CarScript extends Car
 			float crewDmgBase = Math.AbsInt((data[0].impulse / dBodyGetMass(this)) * 1000 * m_dmgContactCoef);// calculates damage as if the object's weight was 1000kg instead of its actual weight
 
 			#ifdef DIAG_DEVELOPER
-			CrashDebugData debugData = new CrashDebugData();
-			debugData.m_VehicleType = GetDisplayName();
-			debugData.m_Damage = dmg;
-			debugData.m_Zone = zoneName;
-			debugData.m_MomentumCurr = GetMomentum();
-			debugData.m_MomentumPrev = m_MomentumPrevTick;
-			debugData.m_MomentumDelta = data[0].impulse;
-			debugData.m_SpeedWorld = GetVelocity(this).Length() * 3.6;
-			debugData.m_SpeedWorldPrev = m_VelocityPrevTick.Length() * 3.6;
-			debugData.m_SpeedWorldDelta = (m_VelocityPrevTick.Length() - GetVelocity(this).Length()) * 3.6;
-			debugData.m_VelocityCur = GetVelocity(this);
-			debugData.m_VelocityPrev = m_VelocityPrevTick;
-			debugData.m_VelocityDot = vector.Dot(m_VelocityPrevTick.Normalized(), GetVelocity(this).Normalized());
-			debugData.m_Time = GetGame().GetTime();
+			CrashDebugData.m_CrashDataPoint = new CrashDebugData();
+			CrashDebugData.m_CrashDataPoint.m_VehicleType = GetDisplayName();
+			CrashDebugData.m_CrashDataPoint.m_Damage = dmg;
+			CrashDebugData.m_CrashDataPoint.m_Zone = zoneName;
+			CrashDebugData.m_CrashDataPoint.m_MomentumCurr = GetMomentum();
+			CrashDebugData.m_CrashDataPoint.m_MomentumPrev = m_MomentumPrevTick;
+			CrashDebugData.m_CrashDataPoint.m_MomentumDelta = data[0].impulse;
+			CrashDebugData.m_CrashDataPoint.m_SpeedWorld = GetVelocity(this).Length() * 3.6;
+			CrashDebugData.m_CrashDataPoint.m_SpeedWorldPrev = m_VelocityPrevTick.Length() * 3.6;
+			CrashDebugData.m_CrashDataPoint.m_SpeedWorldDelta = (m_VelocityPrevTick.Length() - GetVelocity(this).Length()) * 3.6;
+			CrashDebugData.m_CrashDataPoint.m_VelocityCur = GetVelocity(this);
+			CrashDebugData.m_CrashDataPoint.m_VelocityPrev = m_VelocityPrevTick;
+			CrashDebugData.m_CrashDataPoint.m_VelocityDot = vector.Dot(m_VelocityPrevTick.Normalized(), GetVelocity(this).Normalized());
+			CrashDebugData.m_CrashDataPoint.m_Time = GetGame().GetTime();
 			
 
 			
@@ -1086,14 +1189,14 @@ class CarScript extends Car
 
 			int pddfFlags;
 			#ifdef DIAG_DEVELOPER
-			CrashDebugData.m_CrashData.Insert(debugData);
-			debugData.m_Speedometer =  GetSpeedometer();
-			Print("Crash data recorded");
+			CrashDebugData.m_CrashData.Insert(CrashDebugData.m_CrashDataPoint);
+			CrashDebugData.m_CrashDataPoint.m_Speedometer =  GetSpeedometer();
+			//Print("Crash data recorded");
 			#endif
 			if (dmg < GameConstants.CARS_CONTACT_DMG_THRESHOLD)
 			{			
 				#ifdef DIAG_DEVELOPER
-				debugData.m_DamageType = "Small";
+				CrashDebugData.m_CrashDataPoint.m_DamageType = "Small";
 				if (DEBUG_OUTPUT_TYPE & EVehicleDebugOutputType.DAMAGE_APPLIED)
 					Debug.Log(string.Format("[Vehiles:Damage]:: DMG %1 to the %2 zone is SMALL (threshold: %3), SPEEDOMETER: %4, TIME: %5", dmg, zoneName, GameConstants.CARS_CONTACT_DMG_MIN, GetSpeedometer(), GetGame().GetTime() ));
 				#endif
@@ -1103,7 +1206,7 @@ class CarScript extends Car
 			else
 			{
 				#ifdef DIAG_DEVELOPER
-				debugData.m_DamageType = "Big";
+				CrashDebugData.m_CrashDataPoint.m_DamageType = "Big";
 				if (DEBUG_OUTPUT_TYPE & EVehicleDebugOutputType.DAMAGE_APPLIED)
 					Debug.Log(string.Format("[Vehiles:Damage]:: DMG %1 to the %2 zone is BIG (threshold: %3), SPEED: %4, TIME: %5", dmg, zoneName, GameConstants.CARS_CONTACT_DMG_THRESHOLD, GetSpeedometer(), GetGame().GetTime() ));
 				#endif
@@ -1141,12 +1244,15 @@ class CarScript extends Car
 				if ( dmg > GameConstants.CARS_CONTACT_DMG_KILLCREW )
 				{		
 					#ifdef DIAG_DEVELOPER
+					CrashDebugData.m_CrashDataPoint.m_CrewDamageBase = dmg;
+					CrashDebugData.m_CrashDataPoint.m_DMGHealth = -100;
 					if (DEBUG_OUTPUT_TYPE & EVehicleDebugOutputType.DAMAGE_APPLIED)
 					{
 						Debug.Log("--------------------------------------------------");
 						Debug.Log("Killing the player");
 						Debug.Log("Crew DMG Base: " + dmg);
 						Debug.Log("--------------------------------------------------");
+
 					}
 					#endif
 					player.SetHealth(0.0);
@@ -1159,6 +1265,10 @@ class CarScript extends Car
 					float hp = Math.Lerp( 2, 100, shockTemp );
 
 					#ifdef DIAG_DEVELOPER
+					CrashDebugData.m_CrashDataPoint.m_CrewDamageBase = dmg;
+					CrashDebugData.m_CrashDataPoint.m_ShockTemp = shockTemp;
+					CrashDebugData.m_CrashDataPoint.m_DMGHealth = hp;
+					CrashDebugData.m_CrashDataPoint.m_DMGShock = shock;
 					if (DEBUG_OUTPUT_TYPE & EVehicleDebugOutputType.DAMAGE_APPLIED)
 					{
 						Debug.Log("--------------------------------------------------");
@@ -1274,7 +1384,8 @@ class CarScript extends Car
 		switch (state)
 		{
 			case CarEngineSoundState.STARTING:
-				SEffectManager.PlaySound("Offroad_02_Starting_SoundSet", ModelToWorld(GetEnginePos()));
+				m_PreStartSound = SEffectManager.PlaySound("Offroad_02_Starting_SoundSet", ModelToWorld(GetEnginePos()));
+				m_PreStartSound.SetSoundFadeOut(0.15);
 				break;
 			case CarEngineSoundState.START_OK:
 				// play different sound based on selected camera
@@ -1299,15 +1410,18 @@ class CarScript extends Car
 				break;
 				
 			case CarEngineSoundState.START_NO_FUEL:
-				SEffectManager.PlaySound("offroad_engine_failed_start_fuel_SoundSet", ModelToWorld(GetEnginePos()));
+				sound = SEffectManager.PlaySound("offroad_engine_failed_start_fuel_SoundSet", ModelToWorld(GetEnginePos()));
+				sound.SetAutodestroy(true);
 				break;
 				
 			case CarEngineSoundState.START_NO_BATTERY:
-				SEffectManager.PlaySound("offroad_engine_failed_start_battery_SoundSet", ModelToWorld(GetEnginePos()));
+				sound = SEffectManager.PlaySound("offroad_engine_failed_start_battery_SoundSet", ModelToWorld(GetEnginePos()));
+				sound.SetAutodestroy(true);
 				break;
 				
 			case CarEngineSoundState.START_NO_SPARKPLUG:
-				SEffectManager.PlaySound("offroad_engine_failed_start_sparkplugs_SoundSet", ModelToWorld(GetEnginePos()));
+				sound = SEffectManager.PlaySound("offroad_engine_failed_start_sparkplugs_SoundSet", ModelToWorld(GetEnginePos()));
+				sound.SetAutodestroy(true);
 				break;
 				
 			case CarEngineSoundState.STOP_OK:
@@ -1333,6 +1447,58 @@ class CarScript extends Car
 				break;
 		}
 		#endif
+	}
+	
+	override void MarkCrewMemberUnconscious(int crewMemberIndex)
+	{
+		set<int> crewMemberIndicesCopy = new set<int>();
+		crewMemberIndicesCopy.Copy(m_UnconsciousCrewMemberIndices);
+		crewMemberIndicesCopy.Insert(crewMemberIndex);
+
+		m_UnconsciousCrewMemberIndices = crewMemberIndicesCopy;
+	}
+	
+	override void MarkCrewMemberDead(int crewMemberIndex)
+	{
+		set<int> crewMemberIndicesCopy = new set<int>();
+		crewMemberIndicesCopy.Copy(m_DeadCrewMemberIndices);
+		crewMemberIndicesCopy.Insert(crewMemberIndex);
+
+		m_DeadCrewMemberIndices = crewMemberIndicesCopy;
+	}
+	
+	override void HandleByCrewMemberState(ECrewMemberState state)
+	{
+		switch (state)
+		{
+			case ECrewMemberState.UNCONSCIOUS:
+				foreach (int unconsciousCrewMemberIndex : m_UnconsciousCrewMemberIndices)
+				{
+					if (unconsciousCrewMemberIndex == DayZPlayerConstants.VEHICLESEAT_DRIVER)
+					{
+						EngineStop();
+						SetBrake(0.5);
+					}
+					
+					m_UnconsciousCrewMemberIndices.RemoveItem(unconsciousCrewMemberIndex);
+				}
+
+				break
+			
+			case ECrewMemberState.DEAD:
+				foreach (int deadCrewMemberIndex : m_DeadCrewMemberIndices)
+				{
+					if (deadCrewMemberIndex == DayZPlayerConstants.VEHICLESEAT_DRIVER)
+					{
+						EngineStop();
+						SetBrake(0.5);
+					}
+					
+					m_DeadCrewMemberIndices.RemoveItem(deadCrewMemberIndex);
+				}
+
+				break
+		}
 	}
 
 	//! DEPRECATED	
@@ -2244,6 +2410,7 @@ class CarScript extends Car
 		AddAction(ActionSwitchLights);
 		AddAction(ActionCarHornShort);
 		AddAction(ActionCarHornLong);
+		AddAction(ActionPushCar);
 	}
 	
 	void AddAction(typename actionName)
@@ -2399,6 +2566,8 @@ class CarScript extends Car
 		}
 	}
 	
+
+	
 	protected void GenerateCarHornAINoise(int pState)
 	{
 		if (pState != ECarHornState.OFF)
@@ -2433,6 +2602,11 @@ class CarScript extends Car
 	float GetMomentum()
 	{
 		return GetVelocity(this).Length() * dBodyGetMass(this);
+	}
+	
+	float GetPushForceCoefficientMultiplier()
+	{
+		return 1.0;
 	}
 
 #ifdef DEVELOPER

@@ -34,11 +34,6 @@ class ContainerWithCargo extends ClosableContainer
 		return m_CargoGrid.IsItemActive();
 	}
 	
-	override bool CanEquip()
-	{
-		return m_CargoGrid.CanEquip();
-	}
-	
 	override bool CanCombine()
 	{
 		return m_CargoGrid.CanCombine();
@@ -319,14 +314,14 @@ class ContainerWithCargo extends ClosableContainer
 			ItemManager.GetInstance().ShowSourceDropzone( item );
 		}
 
-		if( w.FindAnyWidget("Selected") )
+		if( w.FindAnyWidget("Cursor") )
 		{
-			w.FindAnyWidget("Selected").SetColor( color );
+			w.FindAnyWidget("Cursor").SetColor( color );
 		}
 		else
 		{
 			string name = w.GetName();
-			name.Replace( "PanelWidget", "Selected" );
+			name.Replace( "PanelWidget", "Cursor" );
 			if( w.FindAnyWidget( name ) )
 			{
 				w.FindAnyWidget( name ).SetColor( color );
@@ -401,9 +396,9 @@ class ContainerWithCargo extends ClosableContainer
 			
 			Icon icon = m_CargoGrid.GetIcon( item );
 			
-			if( icon && w && w.FindAnyWidget("Selected") )
+			if( icon && w && w.FindAnyWidget("Cursor") )
 			{
-				w.FindAnyWidget("Selected").SetColor( ColorManager.BASE_COLOR );
+				w.FindAnyWidget("Cursor").SetColor( ColorManager.BASE_COLOR );
 				icon.Refresh();
 				Refresh();
 			}

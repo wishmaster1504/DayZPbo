@@ -420,10 +420,24 @@ class string
 		}
 	}
 
+	// !Joins array of strings into a single string, separated by 'separator'. Inverse of Split
+	static string Join(string separator, notnull TStringArray tokens)
+	{
+		string output;
+		foreach (int i, string s: tokens)
+		{
+			if (i != 0)
+				output += separator;
+			output += s;
+		}
+		return output;
+	}
+
 	/**
 	\brief Gets n-th character from string
 		\param index character index
 		\return \p string character on index-th position in string
+		\warning VME When index less than 0 or greater than string length  
 		@code
 			string str = "Hello World";
 			Print( str[4] ); // Print( str.Get(4) );
@@ -431,13 +445,15 @@ class string
 			>> 'o'
 		@endcode
 	*/ 			
-	string Get(int index)
-	{
-		return value.Substring(index, 1);
-	}
+	proto string Get(int index);
 	
 	/**
-	\brief Sets n-th character in string
+	\brief Sets the n-th character in string with the input, replacing previous value
+		\param index index to be replaced
+		\param input single non-terminated character value to replace with
+		\warning VME When index less than 0 or greater than string length  
+		\warning (Diag)		VME When string is empty or greater than length of 1
+				 (Retail)	Calls 'string.Insert' except it replaces only the initial character
 		@code
 			string str = "Hello World";
 			str[4] = "O";
@@ -445,15 +461,54 @@ class string
 	
 			>> 'HellO World'
 		@endcode
+		
+		@code
+			string str = "Hello World";
+			str[6] = "Test ";
+			Print( str );
+	
+			>> 'Hello Test orld'
+		@endcode
 	*/ 
-	void Set(int n, string _value)
+	proto void Set(int index, string input);
+
+#ifdef DIAG_DEVELOPER
+	/**
+	\brief Do not use. Re-implemented for verification of new function due to design of previous function allowing for unexpected behavior that modders may depend on.
+		\see string.Set warnings for handling existing mods in Retail 
+		@code
+			string str = "Hello World";
+			str.OldSet(6, "Test ");
+			Print( str );
+	
+			>> 'Hello Test orld'
+		@endcode
+	 */
+	void OldSet(int n, string _value)
 	{
-	    string pre = value.Substring(0, n);
-	    n += 1;
-	    int length = value.Length() - n;
-	    string post = value.Substring(n, length);
-	    value = pre + _value + post;
+		string pre = value.Substring(0, n);
+		n += 1;
+		int length = value.Length() - n;
+		string post = value.Substring(n, length);
+		value = pre + _value + post;
 	}
+#endif
+	
+	/**
+	\brief Inserts a string into the n-th index, increasing the string length by the size of the input
+		\param index index to insert at
+		\param input string value to insert with
+		\warning VME When index less than 0 or greater than string length  
+		\warning VME When string is empty
+		@code
+			string str = "Hello World";
+			str.Insert(6, "Test ");
+			Print( str );
+	
+			>> 'Hello Test World'
+		@endcode
+	*/ 
+	proto void Insert(int index, string input);
 	
 	/**
 	\brief Gets n-th character from string

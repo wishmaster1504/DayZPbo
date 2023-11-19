@@ -67,14 +67,23 @@
 	<!-- Leaning -->
 	<input name="UALeanLeft">
 		<btn name="kQ" />
-        <btn name="x1ShoulderLeft" />
 	</input>
 	<input name="UALeanRight">
 		<btn name="kE" />
+	</input>
+	<input name="UALeanLeftGamepad">
+        <btn name="x1ShoulderLeft" />
+	</input>
+	<input name="UALeanRightGamepad">
         <btn name="x1ShoulderRight" />
 	</input>
 
 	<!-- CAMERA -->
+	<input name="UAPersonCamSwitchSide">
+		<btn name="x1ThumbRight" >
+			<event name="holdbegin" />
+		</btn>
+	</input>
 	<input name="UAAimLeft">
 		<btn name="mLeft" />
 		<btn name="x1RightThumbLeft" />
@@ -279,6 +288,8 @@
 	<!-- Raise Hands -->
 	<input name="UATempRaiseWeapon">
 		<btn name="mBRight" />
+	</input>
+	<input name="UATempRaiseWeaponGamepad">
 		<btn name="x1TriggerLeft" />
 	</input>
 

@@ -4,9 +4,12 @@
 
 */
 
-
-
-
+enum HumanInputControllerOverrideType
+{
+	DISABLED,
+	ENABLED,		//! Permenantly active until DISABLED is passed
+	ONE_FRAME,		//! Will apply value and then DISABLED on subsequent CommandHandler call
+};
 
 // *************************************************************************************
 // ! HumanInputController - what we know about the input - human.GetInputController()
@@ -27,6 +30,9 @@ class HumanInputController
 	//! returns per tick aim change (in radians) 
 	proto native vector 		GetAimChange();
 
+	//! returns aim change (in radians) 
+	proto native vector 		GetAimDelta(float dt);
+
 	//! returns absolute tracking change (in radians) 
 	proto native vector 		GetTracking();
 
@@ -46,6 +52,9 @@ class HumanInputController
 	proto native bool			Camera3rdIsRightShoulder();
 
 	//--------------------------------------------------------------
+
+	//! stance change button was pressed
+	proto native bool			IsStanceChange();
 
 	//! jump/climb action was pressed
 	proto native bool			IsJumpClimb();
@@ -222,25 +231,28 @@ class HumanInputController
 	// overrides
 
 	//!
-	proto native void 			OverrideMovementSpeed(bool pOverride, float pVal);
+	proto native void 			OverrideMovementSpeed(HumanInputControllerOverrideType overrideType, float value);
 
 	//!
-	proto native void 			OverrideMovementAngle(bool pOverride, float pVal);
+	proto native void 			OverrideMovementAngle(HumanInputControllerOverrideType overrideType, float value);
 	
 	//!
-	proto native void 			OverrideAimChangeX(bool pOverride, float pVal);
+	proto native void 			OverrideAimChangeX(HumanInputControllerOverrideType overrideType, float value);
 
 	//!
-	proto native void 			OverrideAimChangeY(bool pOverride, float pVal);
+	proto native void 			OverrideAimChangeY(HumanInputControllerOverrideType overrideType, float value);
 
 	//!
-	proto native void 			OverrideMeleeEvade(bool pOverride, bool pValue);
+	proto native void 			OverrideMeleeEvade(HumanInputControllerOverrideType overrideType, bool value);
 
 	//!
-	proto native void 			OverrideRaise(bool pOverride, bool pValue);
+	proto native void 			OverrideRaise(HumanInputControllerOverrideType overrideType, bool value);
 
 	//! 
-	proto native void 			Override3rdIsRightShoulder(bool pOverride, bool pValue);
+	proto native void 			Override3rdIsRightShoulder(HumanInputControllerOverrideType overrideType, bool value);
+
+	//!
+	proto native void 			OverrideFreeLook(HumanInputControllerOverrideType overrideType, bool value);
 
 
 	//--------------------------------------------------------------
@@ -610,6 +622,8 @@ class HumanCommandUnconscious
 	private void ~HumanCommandUnconscious() {}
 	
 	proto native void 	WakeUp(int targetStance = -1);
+	proto native bool	IsWakingUp();
+	
 	proto native bool	IsOnLand();
 	proto native bool	IsInWater();
 }
@@ -643,6 +657,10 @@ class HumanCommandLadder
 	
 	//!
 	proto native static int 		DebugGetLadderIndex(string pComponentName); 
+
+	//! returns the safe logout position in worldspace 
+	//! the position is closest to the last possible exit point the player passed
+	proto native vector				GetLogoutPosition();
 }
 
 
@@ -1107,7 +1125,7 @@ class HumanCommandAdditives
 class HumanMovementState
 {
 	int 		m_CommandTypeId;	//! current command's id 
-	int 		m_iStanceIdx;		//! current stance (DayZPlayer.STANCEIDX_ERECT, ...), only if the command has a stance
+	int 		m_iStanceIdx;		//! current stance (DayZPlayerConstants.STANCEIDX_ERECT, ...), only if the command has a stance
 	int 		m_iMovement;		//! current movement (0 idle, 1 walk, 2-run, 3-sprint), only if the command has a movement 
 	float		m_fLeaning;			//! leaning state (not all commands need to have all movements)
 	
@@ -1248,7 +1266,12 @@ class Human extends Man
 
 	//! gets human transform in World Space
 	proto native	void 		GetTransformWS(out vector pTm[4]);
+	
+	//! makes test if there's enough space for character's collider assuming that character can be pushed away from obstacle - usable for checking if character is in some tight space
+	proto native	bool		CheckFreeSpace(vector localDir, float distance, bool useHeading, vector posOffset = vector.Zero, float xzScale = 1.0);
 
+	//! makes test if character can physically move in given direction - length of dir means distance, returns distance fraction
+	proto			float		CollisionMoveTest(vector dir, vector offset, float xzScale, IEntity ignoreEntity, out IEntity hitEntity, out vector hitPosition, out vector hitNormal);
 
 	//---------------------------------------------------------
 	// link/unlink to/from local space
@@ -1260,21 +1283,6 @@ class Human extends Man
 
 	//! returns bone index for a name (-1 if pBoneName doesn't exist)
 	proto native 	int 		GetBoneIndexByName(string pBoneName);
-
-	//! returns local space, model space, world space position of the bone 
-	proto native	vector		GetBonePositionLS(int pBoneIndex);
-	proto native 	vector		GetBonePositionMS(int pBoneIndex);
-	proto native 	vector		GetBonePositionWS(int pBoneIndex);
-
-	//! returns local space, model space, world space orientation (quaternion) of a bone 
-	proto native	void 		GetBoneRotationLS(int pBoneIndex, out float pQuat[4]);
-	proto native 	void 		GetBoneRotationMS(int pBoneIndex, out float pQuat[4]);
-	proto native 	void 		GetBoneRotationWS(int pBoneIndex, out float pQuat[4]);
-
-	//! returns local space, model space, world space orientation (quaternion) of a bone 
-	proto native	void 		GetBoneTransformLS(int pBoneIndex, out vector pTm[4]);
-	proto native 	void 		GetBoneTransformMS(int pBoneIndex, out vector pTm[4]);
-	proto native 	void 		GetBoneTransformWS(int pBoneIndex, out vector pTm[4]);
 
 	
 	//! returns animation interface - usable in HumanCommandScript implementations 
@@ -1294,6 +1302,9 @@ class Human extends Man
 	proto native	bool		PhysicsIsSolid();
 	proto native	void		PhysicsSetSolid(bool pSolid);
 
+	//! Sets and synchronize interaction layers 'RAGDOLL' and 'RAGDOLL_NO_CHARACTER' to prevent body stacking and players going through dead creatures
+	proto native	void		PhysicsSetRagdoll(bool pEnable);
+
 	//---------------------------------------------------------
 	// controller 
 			
@@ -1312,8 +1323,8 @@ class Human extends Man
 	//! returns movement state (current command id, )
 	proto native 	void 	GetMovementState(HumanMovementState pState);
 
-	//! returns current command ID
-	// proto native 	int 	GetCurrentCommandID();
+	//! returns current command ID (see DayZPlayerConstants.COMMANDID_...)
+	proto native 	int 	GetCurrentCommandID();
 
 
 	//!----- MOVE -----

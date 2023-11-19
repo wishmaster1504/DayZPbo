@@ -547,8 +547,8 @@ class ContainerWithCargoAndAttachments extends ClosableContainer
 			
 			if( icon )
 			{
-				if( w && w.FindAnyWidget("Selected") )
-					w.FindAnyWidget("Selected").SetColor( ColorManager.BASE_COLOR );
+				if( w && w.FindAnyWidget("Cursor") )
+					w.FindAnyWidget("Cursor").SetColor( ColorManager.BASE_COLOR );
 				icon.Refresh();
 				Refresh();
 			}
@@ -680,7 +680,7 @@ class ContainerWithCargoAndAttachments extends ClosableContainer
 
 	void DoubleClick(Widget w, int x, int y, int button)
 	{
-		if( button == MouseState.LEFT )
+		if( button == MouseState.LEFT && !g_Game.IsLeftCtrlDown())
 		{
 			PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
 			if( w == NULL || player.GetInventory().IsInventoryLocked() )
@@ -807,14 +807,14 @@ class ContainerWithCargoAndAttachments extends ClosableContainer
 			color = ColorManager.RED_COLOR;
 		}
 
-		if( w.FindAnyWidget("Selected") )
+		if( w.FindAnyWidget("Cursor") )
 		{
-			w.FindAnyWidget("Selected").SetColor( color );
+			w.FindAnyWidget("Cursor").SetColor( color );
 		}
 		else
 		{
 			string name = w.GetName();
-			name.Replace( "PanelWidget", "Selected" );
+			name.Replace( "PanelWidget", "Cursor" );
 			if( w.FindAnyWidget( name ) )
 			{
 				w.FindAnyWidget( name ).SetColor( color );

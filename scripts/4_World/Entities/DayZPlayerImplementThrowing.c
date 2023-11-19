@@ -81,7 +81,10 @@ class DayZPlayerImplementThrowing
 				}
 				else
 				{
-					if ( m_bThrowingInProgress )
+					HumanCommandMove hcm = m_Player.GetCommand_Move();
+					bool standingFromBack = hcm && hcm.IsStandingFromBack();
+					
+					if ( m_bThrowingInProgress && !standingFromBack)
 					{
 						m_bThrowingInProgress = false;
 						
@@ -149,6 +152,10 @@ class DayZPlayerImplementThrowing
 	
 	bool CanChangeThrowingStance(HumanInputController pHic)
 	{
+		// basic stance has priority
+		if( pHic.IsStanceChange() )
+			return false;
+		
 		// don't change mode in raise
 		if( pHic.IsWeaponRaised() )
 			return false;
@@ -181,6 +188,9 @@ class DayZPlayerImplementThrowing
 			if( playerPB.GetWeaponManager().IsRunning() )
 				return false;
 		}
+		
+		if (!CheckFreeSpace() )
+			return false;
 
 		return true;
 	}
@@ -198,6 +208,10 @@ class DayZPlayerImplementThrowing
 		{
 			return false;
 		}
+		
+		if (!CheckFreeSpace() )
+			return false;
+
 		return true;
 	}
 	
@@ -207,6 +221,11 @@ class DayZPlayerImplementThrowing
 			return false;
 		
 		return CanContinueThrowing(pHic);
+	}
+	
+	bool CheckFreeSpace()
+	{
+		return m_Player.CheckFreeSpace(vector.Forward, 0.7, false);
 	}
 	
 	private DayZPlayer m_Player;

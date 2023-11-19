@@ -28,30 +28,17 @@ class DayZPlayerCommandDeathCallback : HumanCommandDeathCallback
 			
 				m_pPlayer.GetInventory().DropEntityWithTransform(InventoryMode.SERVER, m_pPlayer, itemInHands, m4);
 				
-				if ( GetCEApi() )
+				if (GetCEApi())
 				{
-					int deadBodyLifetime = GetCEApi().GetCEGlobalInt( "CleanupLifetimeDeadPlayer" );
-					if ( deadBodyLifetime <= 0 )
+					int deadBodyLifetime = GetCEApi().GetCEGlobalInt("CleanupLifetimeDeadPlayer");
+					if (deadBodyLifetime <= 0)
 					{
 						deadBodyLifetime = 3600;
 					}
-					itemInHands.SetLifetime( deadBodyLifetime );
+					itemInHands.SetLifetime(deadBodyLifetime);
 				}
 			}	
 		}
-		
-		/*if (GetGame().IsServer())
-		{
-			EntityAI itemInHands = m_pPlayer.GetHumanInventory().GetEntityInHands();
-			if (itemInHands)
-			{
-				if (m_pPlayer.CanDropEntity(itemInHands))
-				{
-					string item_name = itemInHands.GetType();
-					m_pPlayer.ServerReplaceItemInHandsWithNewElsewhere(new DestroyItemInCorpsesHandsAndCreateNewOnGndLambda(itemInHands, item_name, m_pPlayer, false));
-				}
-			}
-		}*/
 	}
 
 	override bool ShouldSimulationBeDisabled()
@@ -84,6 +71,11 @@ class DeathEffectTimer extends Timer
 
 class DayZPlayerImplement extends DayZPlayer
 {
+	static const int DEAD_SCREEN_DELAY = 1000; 			//! DEPRECATED
+	static const float DEFAULT_DYING_TIME = 2.5; 		//! how long does it take to full death screen [s]
+	static const float DYING_PROGRESSION_TIME = 0.05; 	//! time step for gradual update of dead screen visibilibty up to full visbility [s]
+
+
 	ref HumanMovementState 					m_MovementState = new HumanMovementState();	//!< cached ptr for movement state
 	protected ref DayZPlayerImplementAiming				m_AimingModel;
 	protected ref DayZPlayerImplementMeleeCombat		m_MeleeCombat;
@@ -96,16 +88,15 @@ class DayZPlayerImplement extends DayZPlayer
 	protected SHumanCommandMoveSettings 				m_MoveSettings;
 	protected float 									m_FallYDiff;
 	protected float										m_SprintedTime;
+	protected float										m_SprintedTimePerStanceMin;
 	protected bool										m_SprintFull;
 	protected bool										m_IsRaised;
-	protected bool										m_IsFireWeaponRaised; //currently changed in 'HandleWeapons'
 	protected bool										m_ShouldReload;
 	protected bool										m_Camera3rdPerson;
 	protected bool										m_CameraZoomToggle;
 	protected bool										m_bADS;
-	protected bool 										m_ProcessWeaponRaiseCompleted;
+	private float 										m_WeaponRaiseTime; //! measures time from the weapon raise start to complete raise (once per)
 	protected bool 										m_WeaponRaiseCompleted;
-	protected bool										m_CameraEyeZoom; //! DEPRECATED
 	protected ECameraZoomType							m_CameraEyeZoomLevel;
 	protected bool										m_WasIronsight; // was previously ironsights. Only used on weapons
 	protected bool										m_CameraIronsight; // Ironsight NOW!
@@ -118,17 +109,12 @@ class DayZPlayerImplement extends DayZPlayer
 	protected bool 										m_Suicide;
 	protected bool										m_IsUnconscious;
 	protected bool										m_ShouldBeUnconscious;
+	protected bool										m_IsUnconsciousFalling;
 	bool												m_UnconsciousDebug;
 	protected int			 							m_LastCommandBeforeUnconscious;
 	ref WeaponDebug										m_WeaponDebug;
 	ref DeathEffectTimer 								m_DeathEffectTimer;
-	ref Timer 											m_ADSAutomationTimer;
-	protected bool 										m_ADSTimerLaunched; //Necessary, timer tick may not correspond to command handler tick!
 	ref Timer 											m_FightEndBlendTimer;
-//	protected bool 										m_ShouldReturnToOptics;
-//	protected bool 										m_ShouldReturnToRegularIronsights;
-//	protected bool 										m_ShouldReturnToBackupIronsights;
-	//protected bool 									m_ForceHandleOptics;
 	protected bool										m_ProcessFirearmMeleeHit;
 	protected bool										m_ContinueFirearmMelee;
 	protected bool 										m_LiftWeapon_player;
@@ -155,14 +141,14 @@ class DayZPlayerImplement extends DayZPlayer
 	protected bool										m_TriggerPullPlayerOutOfVehicleSynch;
 	protected bool										m_PullPlayerOutOfVehicleKeepsInLocalSpace = false;
 	protected int										m_PullPlayerOutOfVehicleState = -1;
-
+	int													m_ActionSoundCategoryHash;
+	
 	//! constructor 
 	void 	DayZPlayerImplement()
 	{
-		//Print("DayZPlayerImplement: Init");
-		m_IsFireWeaponRaised = false;
 		m_SprintFull = false;
 		m_SprintedTime = 0;
+		m_SprintedTimePerStanceMin = PlayerConstants.FULL_SPRINT_DELAY_DEFAULT;
 		m_AimingModel = new DayZPlayerImplementAiming(this);
 		m_MeleeCombat = new DayZPlayerImplementMeleeCombat(this);
 		m_MeleeFightLogic = new DayZPlayerMeleeFightLogic_LightHeavy(this);
@@ -185,6 +171,7 @@ class DayZPlayerImplement extends DayZPlayer
 		m_NextVoNNoiseTime = 0;
 		m_SyncedHitDataArray = new array<ref SyncHitInfo>;
 		m_CurrentWaterLevel = 0;
+		m_WeaponRaiseTime = 0;
 		
 		RegisterNetSyncVariableBoolSignal("m_TriggerPullPlayerOutOfVehicleSynch");
 	}
@@ -208,7 +195,12 @@ class DayZPlayerImplement extends DayZPlayer
 	{
 		return m_Throwing;
 	}
-
+	
+	DayZPlayerImplementFallDamage GetFallDamage()
+	{
+		return m_FallDamage;
+	}
+	
 	void ~DayZPlayerImplement()
 	{
 	}
@@ -256,7 +248,11 @@ class DayZPlayerImplement extends DayZPlayer
 
 	bool IsFireWeaponRaised()
 	{
-		return m_IsFireWeaponRaised;
+		GetMovementState(m_MovementState);
+		if (m_MovementState)
+			return m_MovementState.IsRaised();
+		
+		return false;
 	}
 
 	bool IsTryingHoldBreath()
@@ -330,7 +326,7 @@ class DayZPlayerImplement extends DayZPlayer
 			HumanCommandWeapons hcw = GetCommandModifier_Weapons();
 			if (hcw)
 			{
-				hcw.SetADS(!m_HandheldOpticsInUse);
+				hcw.SetADS(!IsHandheldOpticsInUse());
 			}
 		}
 	}
@@ -383,6 +379,7 @@ class DayZPlayerImplement extends DayZPlayer
 					optic.GetCompEM().SwitchOff();
 			}
 		}
+		
 		if (m_CameraOptics != state)
 		{
 			SetOptics(state);
@@ -398,6 +395,22 @@ class DayZPlayerImplement extends DayZPlayer
 	bool CanConsumeStamina(EStaminaConsumers consumer) {};
 	bool CanStartConsumingStamina(EStaminaConsumers consumer) {};
 	void DepleteStamina(EStaminaModifiers modifier, float dT = -1) {};
+	
+	bool IsInVehicle()
+	{
+		return m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_VEHICLE || (GetParent() != null && GetParent().IsInherited(Transport));
+	}
+	
+	bool IsSwimming()
+	{
+		return m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_SWIM;
+	}
+	
+	bool IsClimbingLadder()
+	{
+		return m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_LADDER;
+	}
+	
 	
 	bool PlaySoundEvent(EPlayerSoundEventID id, bool from_anim_system = false, bool is_from_server = false) {};
 	bool PlaySoundEventEx(EPlayerSoundEventID id, bool from_anim_system = false, bool is_from_server = false, int param = 0) {};
@@ -419,14 +432,15 @@ class DayZPlayerImplement extends DayZPlayer
 	override string GetDebugText()
 	{
 		string text = super.GetDebugText();
-		text += "Parent: " + Object.GetDebugName(Object.Cast(GetParent())) + "\n";
-		text += "IsSimulationDisabled: " + GetIsSimulationDisabled() + "\n";
+		text += "Parent: " + Object.GetDebugName(Object.Cast(GetParent())) + "\n";//keep
+		text += "IsSimulationDisabled: " + GetIsSimulationDisabled() + "\n";//keep
+		/*
 		text += "DamageDestroyed: " + IsDamageDestroyed() + "\n";
 		text += "DeathProcessed: " + IsDeathProcessed() + "\n";
 		text += "DeathConditionMet: " + IsDeathConditionMet() + "\n";
 		text += "PullOutOfVehicleState: " + m_PullPlayerOutOfVehicleState + "\n";
 		text += "PullOutOfVehicleSynch: " + m_TriggerPullPlayerOutOfVehicleSynch + "\n";
-		text += "Position: " + GetPosition() + "\n";
+		text += "Position: " + GetPosition() + "\n";*/
 		return text;
 	}
 
@@ -495,7 +509,7 @@ class DayZPlayerImplement extends DayZPlayer
 	}
 
 	bool	HandleDeath(int pCurrentCommandID)
-	{		
+	{
 		if (pCurrentCommandID == DayZPlayerConstants.COMMANDID_DEATH)
 		{
 			switch (m_PullPlayerOutOfVehicleState)
@@ -511,56 +525,63 @@ class DayZPlayerImplement extends DayZPlayer
 
 				PhysicsSetSolid(true);
 				
+				//! Can't pull a body out of a car that is in water, don't need to handle that
 				DayZPlayerVehicleCommandDeathCallback callbackVeh;
-				Class.CastTo(callbackVeh, StartCommand_Death(-1, 0, DayZPlayerVehicleCommandDeathCallback));
+				Class.CastTo(callbackVeh, StartCommand_Death(DayZPlayerConstants.DEATH_PULL_OUT_TRANSPORT, 0, DayZPlayerVehicleCommandDeathCallback));
 				Class.CastTo(callbackVeh.m_pPlayer, this);
 				break;
-			}
+			}	
 
 			return true;
 		}
 		
 		if (m_DeathAnimType != -2 && g_Game.GetMissionState() == g_Game.MISSION_STATE_GAME)
 		{
-			if (!m_Suicide) 	
+			if (!CommitedSuicide()) 	
 			{
 				int type = m_DeathAnimType;
-				if( type == -1 ) 
+				if (type == DayZPlayerConstants.DEATH_DEFAULT) 
 					type = GetTypeOfDeath(pCurrentCommandID);
-				
-				// Maybe move elsewhere? Couldn't find a more fitting place to do this but I'm sure there is one
-				// If player dies in driver seat, car shouldn't be simulated by the dead player anymore
-				if (pCurrentCommandID == DayZPlayerConstants.COMMANDID_VEHICLE)
+
+				m_WasInVehicle = false;				
+				HumanCommandVehicle hcv = GetCommand_Vehicle();
+				if (hcv)
 				{
-					HumanCommandVehicle hcv = GetCommand_Vehicle();
-					Transport transport = hcv.GetTransport();
-					int crewPos = transport.CrewMemberIndex( this );
-
+					m_TransportCache = hcv.GetTransport();
 					m_WasInVehicle = !hcv.IsGettingIn() && !hcv.IsGettingOut();
-					
-					if (m_WasInVehicle)
-					{
-						transport.CrewDeath(crewPos);
-					}
-					else
-					{
-						transport.CrewGetOut(crewPos);
-						
-						if (!m_PullPlayerOutOfVehicleKeepsInLocalSpace)
-						{
-							UnlinkFromLocalSpace();
-						}
+				}
 
-						DisableSimulation(false);
-
-						GetItemAccessor().HideItemInHands(false);
-						m_TransportCache = null;
+				if (IsUnconscious() || m_WasInVehicle)
+				{
+					if (m_TransportCache)
+					{
+						m_TransportCache.CrewDeath(m_TransportCache.CrewMemberIndex(this));
+						m_TransportCache.MarkCrewMemberDead(m_TransportCache.CrewMemberIndex(this));
 					}
 				}
+				else
+				{
+					if (m_TransportCache)
+					{
+						m_TransportCache.CrewGetOut(m_TransportCache.CrewMemberIndex(this));
+						m_TransportCache.MarkCrewMemberDead(m_TransportCache.CrewMemberIndex(this));
+					}
+					
+					if (!m_PullPlayerOutOfVehicleKeepsInLocalSpace)
+						UnlinkFromLocalSpace();
+				}
+				
+				DisableSimulation(false);
+				GetItemAccessor().HideItemInHands(false);
+				m_TransportCache = null;
 
 				DayZPlayerCommandDeathCallback callback;
 				Class.CastTo(callback, StartCommand_Death(type, m_DeathHitDir, DayZPlayerCommandDeathCallback));
 				Class.CastTo(callback.m_pPlayer, this);
+			}
+			else
+			{
+				PhysicsSetRagdoll(true);
 			}
 			
 			// disable voice communication
@@ -579,56 +600,48 @@ class DayZPlayerImplement extends DayZPlayer
 	
 	int		GetTypeOfDeath(int pCurrentCommandID)
 	{
-		switch ( pCurrentCommandID )
+		switch (pCurrentCommandID)
 		{
-		case DayZPlayerConstants.COMMANDID_SWIM:
-			return 11;
-		case DayZPlayerConstants.COMMANDID_FALL:
-			return 12;
-		case DayZPlayerConstants.COMMANDID_UNCONSCIOUS:
-			{
-				
+			case DayZPlayerConstants.COMMANDID_SWIM:
+				return DayZPlayerConstants.DEATH_WATER;
+			case DayZPlayerConstants.COMMANDID_FALL:
+				return DayZPlayerConstants.DEATH_FALL;
+			case DayZPlayerConstants.COMMANDID_UNCONSCIOUS:
 				HumanCommandUnconscious hcu = GetCommand_Unconscious();
-				if ( hcu )
+				if (hcu)
 				{
-					if ( hcu.IsOnLand() )
-						return 13;
-					if ( hcu.IsInWater() )
-						return 14;
-				}		
-			}
-			break;
+					if (hcu.IsOnLand())
+						return DayZPlayerConstants.DEATH_UNCON_ON_LAND;
+					if (hcu.IsInWater())
+						return DayZPlayerConstants.DEATH_UNCON_IN_WATER;
+				}
+
+				break;
 		}
 		
-		return 0;
+		return DayZPlayerConstants.DEATH_BODY;
 	}
 	
 	void SendDeathJuncture(int pAnimTypeDeath, float pAnimHitDirDeath)
 	{
-		if ( m_DeathJuctureSent )
+		if (m_DeathJuctureSent)
 			return;
 		
 		DayZPlayerSyncJunctures.SendDeath(this, pAnimTypeDeath, pAnimHitDirDeath);
 		m_DeathJuctureSent = true;
 	}
 	
-	override void EEKilled( Object killer )
+	override void EEKilled(Object killer)
 	{
 		SendDeathJuncture(-1, 0);
 		
 		super.EEKilled(killer);
 	}
 	
-	static const int DEAD_SCREEN_DELAY = 1000; //ms
-	static const float DEFAULT_DYING_TIME = 2.5; //s
-	static const float DYING_PROGRESSION_TIME = 0.05; //s
-	
 	void ShowDeadScreen(bool show, float duration)
 	{
 		#ifdef PLATFORM_PS4
-		//PSN Set multiplay state - NOT ACTIVE	
 		OnlineServices.SetMultiplayState(false);
-		//Print("=== PLATFORM_PS4 - SetMultiplayState NOT ACTIVE [ShowDeadScreen]");
 		#endif		
 		
 		#ifndef NO_GUI
@@ -741,40 +754,20 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 	}
 	
-	void SetDeathDarknessLevel(float duration, float tick_time)
-	{
-	}
+	void SetDeathDarknessLevel(float duration, float tick_time);
 	
-	void RunADSTimer()
-	{
-		if (!m_ADSAutomationTimer.IsRunning() && !m_ADSTimerLaunched)
-		{
-			m_ADSAutomationTimer.Run(PlayerConstants.WEAPON_RAISE_BLEND_DELAY,this,"SendCompleteWeaponRaiseJuncture");
-			m_ADSTimerLaunched = true;
-		}
-	}
-	
-	void StopADSTimer()
-	{
-		if (m_ADSAutomationTimer && m_ADSAutomationTimer.IsRunning())
-		{
-			m_ADSAutomationTimer.Stop();
-		}
-		m_ADSTimerLaunched = false;
-		//m_WeaponRaiseCompleted = false;
-	}
-	
-	void SendCompleteWeaponRaiseJuncture()
-	{
-		ScriptJunctureData pCtx = new ScriptJunctureData;
-		
-		SendSyncJuncture(DayZPlayerSyncJunctures.SJ_WEAPON_RAISE_COMPLETED, pCtx);
-	}
+	void SendCompleteWeaponRaiseJuncture();
 	
 	void CompleteWeaponRaise()
 	{
+		m_WeaponRaiseTime = 0;
 		m_WeaponRaiseCompleted = true;
-		StopADSTimer();
+	}
+	
+	void ResetWeaponRaiseProgress()
+	{
+		m_WeaponRaiseTime = 0;
+		m_WeaponRaiseCompleted = false;
 	}
 	
 	bool IsWeaponRaiseCompleted()
@@ -796,8 +789,7 @@ class DayZPlayerImplement extends DayZPlayer
 			Error("DayZPlayer: OnInputForRemote - cannot read input type");
 			return;
 		}
-
-		//Print("[inv] Input For Remote! type=" + userDataType);
+		
 		switch (userDataType)
 		{
 			case INPUT_UDT_WEAPON_REMOTE_EVENT:
@@ -865,6 +857,7 @@ class DayZPlayerImplement extends DayZPlayer
 
 		Weapon_Base weapon;
 		Class.CastTo(weapon, pInHands);
+		ItemOptics optic = weapon.GetAttachedOptics();
 		
 		CheckLiftWeapon();
 		ProcessLiftWeapon();
@@ -881,15 +874,13 @@ class DayZPlayerImplement extends DayZPlayer
 			m_IsTryingHoldBreath = false;
 		}
 		
-		ItemOptics optic = weapon.GetAttachedOptics();
-
 		if (pInputs.IsFireModeChange())
 		{
 			GetWeaponManager().SetNextMuzzleMode();
 		}
 		if (pInputs.IsZeroingUp())
 		{
-			if (optic && (optic.IsInOptics() || optic.IsUsingWeaponIronsightsOverride()) )
+			if (optic && (optic.IsInOptics() || optic.IsUsingWeaponIronsightsOverride()))
 			{
 				optic.StepZeroingUp();
 			}
@@ -900,7 +891,7 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 		if (pInputs.IsZeroingDown())
 		{
-			if (optic && (optic.IsInOptics() || optic.IsUsingWeaponIronsightsOverride()) )
+			if (optic && (optic.IsInOptics() || optic.IsUsingWeaponIronsightsOverride()))
 			{
 				optic.StepZeroingDown();
 			}
@@ -915,42 +906,42 @@ class DayZPlayerImplement extends DayZPlayer
 			if (optic)
 				HandleOptic(optic, false, pInputs, pExitIronSights);
 		}
-
+		
 		if (!m_MovementState.IsRaised())
 		{
-			m_IsFireWeaponRaised = false;
+			m_IsFireWeaponRaised = false; //legacy reasons
 			if (weapon && weapon.IsInOptics())
+			{
 				weapon.ExitOptics();
+			}
 			
-			StopADSTimer();
-			m_WeaponRaiseCompleted = false;
+			ResetWeaponRaiseProgress();
 
 			return; // if not raised => return
 		}
 		else
 		{
-			m_IsFireWeaponRaised = true;
-			if ( !m_WeaponRaiseCompleted && (!m_ADSAutomationTimer || (m_ADSAutomationTimer && !m_ADSAutomationTimer.IsRunning())) )
+			m_IsFireWeaponRaised = true; //legacy reasons
+			if (!IsWeaponRaiseCompleted())
 			{
-				if (GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_SERVER || !GetGame().IsMultiplayer())
-					RunADSTimer();
+				m_WeaponRaiseTime += pDt;
 			}
-			if (m_ProcessWeaponRaiseCompleted)
+			
+			if (m_WeaponRaiseTime >= PlayerConstants.WEAPON_RAISE_BLEND_DELAY)
 			{
 				CompleteWeaponRaise();
-				m_ProcessWeaponRaiseCompleted = false;
 			}
 		}
 		
 		//! fire
-		if ( GetWeaponManager().CanFire(weapon) )
+		if (GetWeaponManager().CanFire(weapon))
 		{
 			bool autofire = weapon.GetCurrentModeAutoFire(weapon.GetCurrentMuzzle()) && weapon.IsChamberEjectable(weapon.GetCurrentMuzzle());
 			int burst = weapon.GetCurrentModeBurstSize(weapon.GetCurrentMuzzle());
 			int burst_count = weapon.GetBurstCount();
-			if ( !autofire && (burst < 2 || burst_count < 1) )
+			if (!autofire && (burst < 2 || burst_count < 1))
 			{
-				if ( pInputs.IsAttackButtonDown() && GetInputInterface().SyncedValue("UAWeaponMeleeAttack") == 0 && GetInputInterface().SyncedValue("UAHeavyMeleeAttack") == 0 )
+				if (pInputs.IsAttackButtonDown() && GetInputInterface().SyncedValue("UAWeaponMeleeAttack") == 0 && GetInputInterface().SyncedValue("UAHeavyMeleeAttack") == 0)
 				{
 					GetWeaponManager().Fire(weapon);
 				}
@@ -959,12 +950,12 @@ class DayZPlayerImplement extends DayZPlayer
 			{
 #ifdef DIAG_DEVELOPER
 				int burst_option = GetWeaponManager().GetBurstOption();
-				if ( burst_option == 0)
+				if (burst_option == 0)
 				{
 #endif
-					if ( pInputs.IsAttackButton() && GetInputInterface().SyncedValue("UAWeaponMeleeAttack") == 0 && GetInputInterface().SyncedValue("UAHeavyMeleeAttack") == 0 )
+					if (pInputs.IsAttackButton() && GetInputInterface().SyncedValue("UAWeaponMeleeAttack") == 0 && GetInputInterface().SyncedValue("UAHeavyMeleeAttack") == 0)
 					{
-						if ( autofire || burst_count < burst )
+						if (autofire || burst_count < burst)
 						{
 							GetWeaponManager().Fire(weapon);
 						}
@@ -977,7 +968,7 @@ class DayZPlayerImplement extends DayZPlayer
 				}
 				else if (burst_option == 1)
 				{
-					if ( burst > 1 && burst_count == burst )
+					if (burst > 1 && burst_count == burst)
 					{
 						weapon.ResetBurstCount();	
 					}
@@ -999,17 +990,17 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 
 		#ifdef PLATFORM_CONSOLE
-		if ( GetGame().GetInput().LocalRelease( "UAFire", false ) || m_ShouldReload )
+		if (GetGame().GetInput().LocalRelease("UAFire", false) || m_ShouldReload)
 		{
-			if ( !weapon.IsWaitingForActionFinish() && !IsFighting() )
+			if (!weapon.IsWaitingForActionFinish() && !IsFighting())
 			{
 				int muzzle_index = weapon.GetCurrentMuzzle();
 			
-				if ( weapon.IsChamberFiredOut( muzzle_index ) )
+				if (weapon.IsChamberFiredOut(muzzle_index))
 				{
-					if ( weapon.CanProcessWeaponEvents() )
+					if (weapon.CanProcessWeaponEvents())
 					{
-						if ( GetWeaponManager().CanEjectBullet(weapon) )
+						if (GetWeaponManager().CanEjectBullet(weapon))
 						{
 							GetWeaponManager().EjectBullet();
 							pExitIronSights = true;
@@ -1028,16 +1019,22 @@ class DayZPlayerImplement extends DayZPlayer
 	
 	void HandleOptic(notnull ItemOptics optic, bool inHands, HumanInputController pInputs, out bool pExitOptics)
 	{
+		UAInterface input = GetInputInterface();
+		if (!input)
+		{
+			return;
+		}
+
 		Weapon_Base weapon;
 		int FOVcount;
 		bool controllerPressIn;
 		bool controllerPressOut;
 		
-		if (GetUApi().GetInputByID(UAZoomInOptics).LocalPress())
+		if (input.SyncedPress_ID(UAZoomInOptics))
 		{
 			weapon = Weapon_Base.Cast(optic.GetHierarchyParent());
 			FOVcount = optic.GetStepFOVCount();
-			controllerPressIn = GetUApi().GetInputByID(UAZoomInOpticsControllerHelper).LocalPress();
+			controllerPressIn = input.SyncedPress_ID(UAZoomInOpticsControllerHelper);
 		
 			if (weapon && m_CameraIronsight && !m_CameraOptics)
 			{
@@ -1071,11 +1068,11 @@ class DayZPlayerImplement extends DayZPlayer
 			}
 		}
 		
-		if (GetUApi().GetInputByID(UAZoomOutOptics).LocalPress())
+		if (input.SyncedPress_ID(UAZoomOutOptics))
 		{
 			weapon = Weapon_Base.Cast(optic.GetHierarchyParent());
 			FOVcount = optic.GetStepFOVCount();
-			controllerPressOut = GetUApi().GetInputByID(UAZoomOutOpticsControllerHelper).LocalPress();
+			controllerPressOut = input.SyncedPress_ID(UAZoomOutOpticsControllerHelper);
 			if (m_CameraOptics)
 			{
 				if (!optic.StepFOVDown())
@@ -1117,11 +1114,20 @@ class DayZPlayerImplement extends DayZPlayer
 	float m_DamageHitDir = 0.0;
 	float m_DamageHealth = 0.0;
 
-	bool HandleDamageHit(int pCurrentCommandID)
+	bool IsInFullbodyDamageAnimation()
 	{
-		if ( !m_SyncedHitDataArray || m_SyncedHitDataArray.Count() == 0 )
+		return (m_DamageHitFullbody && m_DamageHitAnimType != -1) || GetCommand_Damage() != null;
+	}
+
+	//! Must be ran at the start of CommandHandler before Jump is triggered
+	void EvaluateDamageHit(int pCurrentCommandID)
+	{
+		//! Reset damage hit to prevent animation from playing unnecessarily when it is already cancelled out
+		m_DamageHitAnimType = -1;
+
+		if (!m_SyncedHitDataArray || m_SyncedHitDataArray.Count() == 0)
 		{
-			return false;
+			return;
 		}
 		
 		//evaluate all hit data
@@ -1133,7 +1139,8 @@ class DayZPlayerImplement extends DayZPlayer
 			m_DamageHitDir = data.m_HitDir;
 			
 			//client-side effects
-			if ( !GetGame().IsDedicatedServer() && IsAlive() && !IsUnconscious() && data.m_HasSource && GetGame().GetMission().GetHud() && GetGame().GetPlayer() == this ) //only for controlled players
+			#ifndef SERVER
+			if (IsAlive() && !IsUnconscious() && data.m_HasSource && GetGame().GetMission().GetHud() && GetGame().GetPlayer() == this) //only for controlled players
 			{
 				m_DamageHealth = data.m_HealthDamage;
 				if (m_DamageHealth > 0.0)
@@ -1142,32 +1149,38 @@ class DayZPlayerImplement extends DayZPlayer
 					GetGame().GetMission().GetHud().SpawnHitDirEffect(this,m_DamageHitDir,rel);
 				}
 			}
+			#endif
 			
-			if ( !greatest_hit )
+			if (!greatest_hit)
 			{
 				greatest_hit = data;
 			}
-			//else if ( data.m_HealthDamage > greatest_hit.m_HealthDamage || (data.m_Fullbody && !greatest_hit.m_Fullbody) ) //TODO - revisit cumulative calculation for animation evaluation purposes (stagger on shotgun to the chest)
-			else if ( data.m_Fullbody ) //temporary solution; last fullbody hit is used for animation purposes, some light hit otherwise
+			//else if (data.m_HealthDamage > greatest_hit.m_HealthDamage || (data.m_Fullbody && !greatest_hit.m_Fullbody)) //TODO - revisit cumulative calculation for animation evaluation purposes (stagger on shotgun to the chest)
+			else if (data.m_Fullbody) //temporary solution; last fullbody hit is used for animation purposes, some light hit otherwise
 			{
 				greatest_hit = data;
 			}
+		}
+		
+		m_SyncedHitDataArray.Clear();
+		m_DamageHealth = 0.0;
+
+		//! ignore hit impacts in prone (for now)
+		if (m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_PRONE || m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_RAISEDPRONE)
+		{
+			return;
 		}
 		
 		//general effects
 		m_DamageHitFullbody = greatest_hit.m_Fullbody;
 		m_DamageHitAnimType = greatest_hit.m_AnimType;
 		m_DamageHitDir = greatest_hit.m_HitDir;
-		
-		m_SyncedHitDataArray.Clear();
-		m_DamageHealth = 0.0;
-		
-		//! ignore hit impacts in prone (for now)
-		if (m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_PRONE || m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_RAISEDPRONE)
-			return false;
-		
+	}
+
+	bool HandleDamageHit(int pCurrentCommandID)
+	{
 		// If transportcache is not null, player is unconscious inside of a car and should not head into a damage command
-		if (m_DamageHitAnimType != -1 && m_TransportCache == null)
+		if (m_DamageHitAnimType != -1 && m_TransportCache == null && !CommitedSuicide())
 		{
 			HumanCommandVehicle vehCommand = GetCommand_Vehicle();		
 			if (m_DamageHitFullbody && (!vehCommand || vehCommand.IsGettingIn() || vehCommand.IsGettingOut()))
@@ -1190,13 +1203,11 @@ class DayZPlayerImplement extends DayZPlayer
 	//! selects animation type and direction based on damage system data
 	bool EvaluateDeathAnimation(int pDamageType, EntityAI pSource, string pAmmoType, out int pAnimType, out float pAnimHitDir)
 	{
-		//! 
 		bool doPhxImpulse = GetGame().ConfigGetInt("cfgAmmo " + pAmmoType + " doPhxImpulse") > 0;
 
-		//! anim type (-1 = default)
-		pAnimType = -1;		
-		if ( doPhxImpulse )
-			pAnimType = 10;
+		pAnimType = DayZPlayerConstants.DEATH_DEFAULT;		
+		if (doPhxImpulse)
+			pAnimType = DayZPlayerConstants.DEATH_FAST;
 
 		//! direction
 		vector targetDirection = GetDirection();
@@ -1214,9 +1225,7 @@ class DayZPlayerImplement extends DayZPlayer
 		pAnimHitDir = Math.Acos(cosFi) * Math.RAD2DEG;
 		if (cross[1] < 0)
 			pAnimHitDir = -pAnimHitDir;
-
-		//Print("hitdir: " + pAnimHitDir.ToString());
-
+		
 		return true;
 	}
 
@@ -1229,50 +1238,48 @@ class DayZPlayerImplement extends DayZPlayer
 		pAnimHitFullbody = false; // additive anm
 		GetMovementState(m_MovementState);
 
-		switch ( pDamageType )
+		switch (pDamageType)
 		{
 			case DT_CLOSE_COMBAT:
-				//! ignore hit impacts in prone (for now)
-				/*if (m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_PRONE || m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_RAISEDPRONE)
-					return false;*/
-
 				//! impact from infected attack will be light only
-			 	if ( pSource.IsInherited(DayZInfected) )
+			 	if (pSource.IsInherited(DayZInfected))
 					break;
 
 				pAnimType = GetGame().ConfigGetInt("cfgAmmo " + pAmmoType + " hitAnimation");
 				invertHitDir = GetGame().ConfigGetInt("cfgAmmo " + pAmmoType + " invertHitDir");
-				if ( !IsUnconscious() && pAnimType == 1 && !m_MeleeFightLogic.IsInBlock() )
+				if (!IsUnconscious() && pAnimType == 1 && !m_MeleeFightLogic.IsInBlock())
 					pAnimHitFullbody = true;
-			break;
+				break;
+
 			case DT_FIRE_ARM:
 				int impactBehaviour = 0;
 
-				if ( !IsUnconscious() && GetHealth("", "Shock") > 25 )
+				if (!IsUnconscious() && GetHealth("", "Shock") > 25)
 				{
 					//! play full body when these coponents were hit
-					if ( pComponent == "Torso" || pComponent == "Head")
+					if (pComponent == "Torso" || pComponent == "Head")
 					{
 						impactBehaviour = GetGame().ConfigGetInt("cfgAmmo " + pAmmoType + " impactBehaviour");
 						float fireDamage = pDamageResult.GetHighestDamage("Health");
 						float shockDamage = pDamageResult.GetHighestDamage("Shock");
-						if ( ( fireDamage > 80.0 || shockDamage > 40.0 ) && impactBehaviour == 1 )
-						{
+						if ((fireDamage > 80.0 || shockDamage > 40.0) && impactBehaviour == 1)
 							pAnimHitFullbody = true;
-						}
 					}
 				}
 
-			break;
+				break;
+
 			case DT_EXPLOSION:
-			break;
+				break;
+
 			case DT_CUSTOM:
 				pAnimType = GetGame().ConfigGetInt("cfgAmmo " + pAmmoType + " hitAnimation");
-				if ( pAnimType == 1 )
+				if (pAnimType == 1)
 					pAnimHitFullbody = true;
 				else
 					return false; //! skip evaluation of dmg hit animation
-			break;
+
+				break;
 		}
 
 		//! direction
@@ -1291,14 +1298,12 @@ class DayZPlayerImplement extends DayZPlayer
 		pAnimHitDir = Math.Acos(cosFi) * Math.RAD2DEG;
 		
 		// We will invert direction of the hit
-		if ( invertHitDir > 0 )
+		if (invertHitDir > 0)
 			pAnimHitDir -= 180;
 		
 		if (cross[1] < 0)
 			pAnimHitDir = -pAnimHitDir;
-
-		//Print("hitdir: " + pAnimHitDir.ToString());
-
+		
 		return true;
 	}
 
@@ -1309,7 +1314,7 @@ class DayZPlayerImplement extends DayZPlayer
 		
 		m_TransportHitRegistered = false;
 		
-		if ( !IsAlive() )
+		if (!IsAlive())
 		{
 			int animTypeDeath;
 			float animHitDirDeath;
@@ -1318,21 +1323,21 @@ class DayZPlayerImplement extends DayZPlayer
 				SendDeathJuncture(animTypeDeath, animHitDirDeath);
 			}			
 			
-			if ( !m_DeathSyncSent ) //checked until the death is evaluated by 'OnCommandHandlerTick' higher up the road
+			if (!m_DeathSyncSent) //checked until the death is evaluated by 'OnCommandHandlerTick' higher up the road
 			{
 				Man killer = source.GetHierarchyRootPlayer();
 				
-				if ( !m_KillerData ) //only one player is considered killer in the event of crossfire
+				if (!m_KillerData) //only one player is considered killer in the event of crossfire
 				{
-					m_KillerData = new KillerData;
+					m_KillerData = new KillerData();
 					m_KillerData.m_Killer = killer;
 					m_KillerData.m_MurderWeapon = source;
 				}
 				
-				if ( killer && killer.IsPlayer() )
+				if (killer && killer.IsPlayer())
 				{
 					// was player killed by headshot?
-					if ( dmgZone == "Brain" )
+					if (dmgZone == "Brain")
 					{
 						m_KilledByHeadshot = true;
 						if (m_KillerData.m_Killer == killer)
@@ -1347,13 +1352,15 @@ class DayZPlayerImplement extends DayZPlayer
 			float animHitDir;
 			bool animHitFullbody;
 			if (EvaluateDamageHitAnimation(damageResult, damageType, source, dmgZone, ammo, modelPos, animType, animHitDir, animHitFullbody))
-			{
 				DayZPlayerSyncJunctures.SendDamageHitEx(this, animType, animHitDir, animHitFullbody, damageResult, damageType, source, dmgZone, ammo, modelPos);
-			}
 			else
 			{
-				RequestSoundEvent(EPlayerSoundEventID.TAKING_DMG_LIGHT);
-				//add code here
+				bool skipSoundRequest = false;
+				if (damageType == DamageType.CUSTOM && GetCommand_Fall())
+					skipSoundRequest = GetFallDamage().GetLandType() < HumanCommandFall.LANDTYPE_MEDIUM;
+
+				if (!skipSoundRequest)
+					RequestSoundEvent(EPlayerSoundEventID.TAKING_DMG_LIGHT);
 			}
 		}
 
@@ -1361,22 +1368,15 @@ class DayZPlayerImplement extends DayZPlayer
 		if (animHitFullbody)
 		{
 			HumanCommandMelee2 hcm = GetCommand_Melee2();
-			if(hcm) hcm.Cancel();
+			if (hcm)
+				hcm.Cancel();
 		}
-	}
-
-	override void EEHitByRemote(int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos)
-	{
-		super.EEHitByRemote(damageType, source, component, dmgZone, ammo, modelPos);
-		
-		//Print("DayZPlayerImplement : EEHitByRemote");
 	}
 
 	//-------------------------------------------------------------
 	//!
 	//! This HeadingModel
 	//! 
-
 	float 	m_fLastHeadingDiff = 0;
 
 	//!
@@ -1385,12 +1385,12 @@ class DayZPlayerImplement extends DayZPlayer
 		GetMovementState(m_MovementState);
 		
 		//! on ladder - do nothing 
-		if ( m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_LADDER )
+		if (m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_LADDER)
 		{
 			m_fLastHeadingDiff = 0;
 			return false;
 		}
-		if ( m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_VEHICLE )
+		if (m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_VEHICLE)
 		{
 			HumanCommandVehicle hmv = GetCommand_Vehicle();
 			if (hmv.IsGettingOut() || hmv.IsGettingIn())
@@ -1401,14 +1401,18 @@ class DayZPlayerImplement extends DayZPlayer
 			m_fLastHeadingDiff = 0;
 			return false;
 		}
-		if ( m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_UNCONSCIOUS )
+		if (m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_UNCONSCIOUS)
 		{
-			m_fLastHeadingDiff = 0;
-			//pModel.m_iCamMode = DayZPlayerConstants.CAMERAMODE_HEAD;
-			return false;
+			HumanCommandUnconscious	hcu = GetCommand_Unconscious();
+			if (!hcu.IsWakingUp())
+			{
+				m_fLastHeadingDiff = 0;
+				//pModel.m_iCamMode = DayZPlayerConstants.CAMERAMODE_HEAD;
+				return false;
+			}
 		}
 		
-		if ( m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_CLIMB )
+		if (m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_CLIMB)
 		{
 			m_fLastHeadingDiff = 0;
 			return false;
@@ -1446,7 +1450,7 @@ class DayZPlayerImplement extends DayZPlayer
 		{
 			return DayZPlayerImplementHeading.NoHeading(pDt, pModel, m_fLastHeadingDiff);
 		}
-		if ( IsUnconscious() || (GetCommand_Move() && GetCommand_Move().IsLeavingUncon()) )
+		if (IsUnconscious() || (GetCommand_Move() && GetCommand_Move().IsLeavingUncon()))
 		{
 			return DayZPlayerImplementHeading.NoHeading(pDt, pModel, m_fLastHeadingDiff);
 		}
@@ -1462,12 +1466,12 @@ class DayZPlayerImplement extends DayZPlayer
 	override bool	AimingModel(float pDt, SDayZPlayerAimingModel pModel)
 	{
 		GetMovementState(m_MovementState);
-		if( m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_MELEE2 )
+		if (m_MovementState.m_CommandTypeId == DayZPlayerConstants.COMMANDID_MELEE2)
 		{
 			HumanCommandMelee2 hcm = GetCommand_Melee2();
-			if( hcm.IsFinisher() )
+			if (hcm.IsFinisher())
 			{
-				if( !m_AimingFinisherStarted )
+				if (!m_AimingFinisherStarted)
 				{
 					m_AimingModel.OnFinisherBegin(pModel.m_fCurrentAimY);
 					m_AimingFinisherStarted = true;
@@ -1478,14 +1482,14 @@ class DayZPlayerImplement extends DayZPlayer
 			return true;
 		}
 
-		if ( IsFireWeaponRaised() )
+		if (m_MovementState.IsRaised())
 		{
-			if ( !m_RaiseStarted )
+			if (!m_RaiseStarted)
 			{
 				m_AimingModel.OnRaiseBegin(this);
 				m_RaiseStarted = true;
 			}
-			m_AimingModel.ProcessAimFilters( pDt, pModel, m_MovementState.m_iStanceIdx );
+			m_AimingModel.ProcessAimFilters(pDt, pModel, m_MovementState.m_iStanceIdx);
 			
 			return true;
 		}
@@ -1505,10 +1509,10 @@ class DayZPlayerImplement extends DayZPlayer
 	//!
 	bool CanJump()
 	{
-		if ( IsFBSymptomPlaying() || IsRestrained() || IsUnconscious() || IsInFBEmoteState() )
+		if (IsFBSymptomPlaying() || IsRestrained() || IsUnconscious() || IsInFBEmoteState())
 			return false;
 		
-		if ( m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_PRONE || m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_RAISEDPRONE)
+		if (m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_PRONE || m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_RAISEDPRONE)
 			return false;
 		
 		if (IsRaised() && GetInputInterface().SyncedPress("UAGetOverControllerHelper")) //no raised jump on cotroller
@@ -1517,21 +1521,28 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 		
 		HumanItemBehaviorCfg hibcfg = GetItemAccessor().GetItemInHandsBehaviourCfg();
-		if ( !hibcfg.m_bJumpAllowed )
+		if (!hibcfg.m_bJumpAllowed)
 			return false;
 		
-		if ( !DayZPlayerUtils.PlayerCanChangeStance(this, DayZPlayerConstants.STANCEIDX_ERECT) || !DayZPlayerUtils.PlayerCanChangeStance(this, DayZPlayerConstants.STANCEIDX_RAISEDERECT) )
+		if (!DayZPlayerUtils.PlayerCanChangeStance(this, DayZPlayerConstants.STANCEIDX_ERECT) || !DayZPlayerUtils.PlayerCanChangeStance(this, DayZPlayerConstants.STANCEIDX_RAISEDERECT))
 			return false;
+		
+		HumanCommandMove hcm = GetCommand_Move();
+		if (hcm)
+		{
+			if (hcm.IsChangingStance())
+				return false;
+		}
 		
 		return true;
 	}
 
-	bool CanClimb( int climbType, SHumanCommandClimbResult climbRes )
+	bool CanClimb(int climbType, SHumanCommandClimbResult climbRes)
 	{
-		if ( IsFBSymptomPlaying() || IsRestrained() || IsUnconscious() || IsInFBEmoteState() )
+		if (IsFBSymptomPlaying() || IsRestrained() || IsUnconscious() || IsInFBEmoteState())
 			return false;
 		
-		if ( m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_PRONE || m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_RAISEDPRONE)
+		if (m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_PRONE || m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_RAISEDPRONE)
 			return false;
 		
 		if (IsRaised() && GetInputInterface().SyncedPress("UAGetOverControllerHelper")) //no raised climb on cotroller
@@ -1540,7 +1551,7 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 		
 		HumanItemBehaviorCfg hibcfg = GetItemAccessor().GetItemInHandsBehaviourCfg();
-		if ( !hibcfg.m_bJumpAllowed )
+		if (!hibcfg.m_bJumpAllowed)
 			return false;
 		
 		if (climbRes)
@@ -1585,7 +1596,6 @@ class DayZPlayerImplement extends DayZPlayer
 	//!
 	//! This is main command logic
 	//! 
-
 	void HandleADS()
 	{
 		if (!IsAlive())
@@ -1602,8 +1612,8 @@ class DayZPlayerImplement extends DayZPlayer
 		HumanInputController hic = GetInputController();
 		HumanItemAccessor 	hia = GetItemAccessor();
 		HumanCommandWeapons	hcw = GetCommandModifier_Weapons();
-		
 		PlayerBase playerPB = PlayerBase.Cast(this);
+		GetMovementState(m_MovementState);
 		
 		if (playerPB.IsRolling())
 		{
@@ -1616,24 +1626,23 @@ class DayZPlayerImplement extends DayZPlayer
 			m_ResetADS = false;
 		}
 		
-		if ( !m_IsFireWeaponRaised || m_LiftWeapon_player)
+		if (!m_MovementState.IsRaised() || m_LiftWeapon_player)
 		{
-			StopADSTimer();
-			
+			ResetWeaponRaiseProgress();
 			exitSights = true;
 		}
 		else
 		{
-			if ( m_bADS != hic.WeaponADS() )
+			if (m_bADS != hic.WeaponADS())
 			{
 				m_bADS = hic.WeaponADS();
 				bADSToggle = true;
 			}
 			
-			if ( m_bADS && !m_CameraIronsight && !m_CameraOptics )
+			if (m_bADS && !m_CameraIronsight && !m_CameraOptics)
 			{
 				//!artificial Auto-ADS delay
-				if ( !m_WeaponRaiseCompleted )
+				if (!IsWeaponRaiseCompleted())
 				{
 					bADSToggle = false;
 					exitSights = true;
@@ -1645,9 +1654,9 @@ class DayZPlayerImplement extends DayZPlayer
 			}
 		}
 	
-		if (bADSToggle && !GetCommand_Melee2())
+		if (bADSToggle && !GetCommand_Melee2() && !GetThrowing().IsThrowingModeEnabled())
 		{
-			if (hia.IsItemInHandsWeapon() && playerPB.GetItemInHands() && playerPB.GetItemInHands().IsWeapon() && playerPB.GetWeaponManager() && !playerPB.GetWeaponManager().IsRunning() )
+			if (hia.IsItemInHandsWeapon() && playerPB.GetItemInHands() && playerPB.GetItemInHands().IsWeapon() && playerPB.GetWeaponManager() && !playerPB.GetWeaponManager().IsRunning())
 			{
 				Weapon_Base weapon = Weapon_Base.Cast(GetHumanInventory().GetEntityInHands());
 				ItemOptics optic = weapon.GetAttachedOptics();
@@ -1661,14 +1670,13 @@ class DayZPlayerImplement extends DayZPlayer
 				// go to ironsights - disable ironsights when
 				//! if !raised
 				//! if sprinting
-				GetMovementState(m_MovementState);
-				if (!hic.IsWeaponRaised() || m_MovementState.m_iMovement == DayZPlayerConstants.MOVEMENTIDX_SPRINT)
+				if (!m_MovementState.IsRaised() || m_MovementState.m_iMovement == DayZPlayerConstants.MOVEMENTIDX_SPRINT)
 				{
 					switchToADS = false;
 				}
 				
 				// fixes camera switching during item transitions
-				if ( IsLiftWeapon() || !IsRaised() || GetDayZPlayerInventory().IsProcessing() || !IsWeaponRaiseCompleted() || IsFighting() )
+				if (IsLiftWeapon() || !IsRaised() || GetDayZPlayerInventory().IsProcessing() || !IsWeaponRaiseCompleted() || IsFighting())
 				{
 					exitSights = true;
 				}
@@ -1686,14 +1694,12 @@ class DayZPlayerImplement extends DayZPlayer
 					
 					if (m_WasIronsight)
 					{
-//						Print("GO: IRONSIGHT");
 						hic.ResetFreeLookToggle();
 						SwitchOptics(optic,false);
 						SetIronsights(true);
 					}
 					else if (!m_WasIronsight || (!canUseIronsights && canUseOptics))
 					{
-//						Print("GO: OPTICS");
 						SetIronsights(false);
 						SwitchOptics(optic,true);
 					}
@@ -1702,7 +1708,7 @@ class DayZPlayerImplement extends DayZPlayer
 						exitSights = true;
 					}
 					
-					if (hcw && (m_CameraOptics || m_CameraIronsight))
+					if (hcw && (m_CameraOptics/* || m_CameraIronsight*/))
 					{
 						hcw.SetADS(true);
 					}
@@ -1715,7 +1721,7 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 		
 		// leave ironsight and/ or optics
-		if ( exitSights && !m_HandheldOpticsInUse && (m_CameraIronsight || m_CameraOptics) || GetCommand_Melee2() )
+		if (exitSights && !IsHandheldOpticsInUse() && (m_CameraIronsight || m_CameraOptics) || GetCommand_Melee2())
 		{
 			ExitSights();
 		}
@@ -1755,7 +1761,7 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 		
 		// exits optics completely, comment to return to ADS
-		if ( m_LiftWeapon_player && (m_CameraOptics|| m_CameraIronsight) )
+		if (m_LiftWeapon_player && (m_CameraOptics || m_CameraIronsight))
 			ExitSights();
 		
 		if (IsPlayerInStance(DayZPlayerConstants.STANCEMASK_RAISEDPRONE) && (m_CameraOptics || m_CameraIronsight))
@@ -1763,18 +1769,23 @@ class DayZPlayerImplement extends DayZPlayer
 		else
 			GetDayZPlayerType().SetVerticalMinimumAimLimit(DayZPlayerCameraIronsights.CONST_UD_MIN);
 		
-		if ( !m_MovementState.IsRaised() && hic.IsZoomToggle() )        
+		if (hic.IsZoomToggle() && !m_MovementState.IsRaised())        
 		{
-			float pSpeed;
-			vector pLocalDirection;
-			hic.GetMovement(pSpeed ,pLocalDirection);
-			if (pSpeed == 3)
+			m_CameraEyeZoomLevel = ECameraZoomType.NORMAL;
+			if ((IsClimbingLadder() && Math.AbsInt(m_MovementState.m_iMovement) == 2) || (IsSwimming() && m_MovementState.m_iMovement == 3))
 			{
 				m_CameraEyeZoomLevel = ECameraZoomType.SHALLOW;
 			}
-			else
+			else if (!IsClimbingLadder() && !IsSwimming() && !IsInVehicle())
 			{
-				m_CameraEyeZoomLevel = ECameraZoomType.NORMAL;
+				float pSpeed;
+				vector pLocalDirection;
+				hic.GetMovement(pSpeed ,pLocalDirection);
+				
+				if (m_MovementState.m_iStanceIdx == DayZPlayerConstants.STANCEIDX_ERECT && pSpeed == 3)
+				{
+					m_CameraEyeZoomLevel = ECameraZoomType.SHALLOW;
+				}
 			}
 		}
 		else
@@ -1988,11 +1999,10 @@ class DayZPlayerImplement extends DayZPlayer
 
 		HumanInputController hic = GetInputController();
 		EntityAI entityInHands = GetHumanInventory().GetEntityInHands();
+		GetMovementState(m_MovementState);
 		
 		bool isRaisedNow = m_MovementState.IsRaised();
 		bool isWeapon		= entityInHands	&& entityInHands.IsInherited(Weapon);
-		
-		GetMovementState(m_MovementState);
 		
 		bool updateAimingMdfr = false;
 		if (isWeapon != m_IsWeapon)
@@ -2014,7 +2024,8 @@ class DayZPlayerImplement extends DayZPlayer
 			else
 				GetUApi().DeactivateModificator("aiming");
 		}
-		//! handle weapon mode switch
+		
+		// handle ADS ironsights/optics transition logic
 		HandleADS();
 		
 		// handle weapons
@@ -2027,7 +2038,7 @@ class DayZPlayerImplement extends DayZPlayer
 				bool exitIronSights = false;
 				HandleWeapons(pDt, entityInHands, hic, exitIronSights);
 			}
-			else if (m_HandheldOpticsInUse && m_CameraOptics && opticInHands)
+			else if (IsHandheldOpticsInUse() && m_CameraOptics && opticInHands)
 			{
 				bool exitOptic = false;
 				HandleOptic(opticInHands, true, hic, exitOptic);
@@ -2037,8 +2048,7 @@ class DayZPlayerImplement extends DayZPlayer
 		//! handle all Camera changes, switch + zoom
 		HandleView();
 		
-		GetMovementState(m_MovementState);
-		if ( m_MovementState.m_iMovement != m_MovementState.m_LocalMovement )
+		if (m_MovementState.m_iMovement != m_MovementState.m_LocalMovement)
 		{
 			OnMovementChanged();
 			m_MovementState.m_LocalMovement = m_MovementState.m_iMovement;
@@ -2053,9 +2063,9 @@ class DayZPlayerImplement extends DayZPlayer
 		//! handle finished commands
 		if (pCurrentCommandFinished)
 		{
-			if ( pCurrentCommandID == DayZPlayerConstants.COMMANDID_UNCONSCIOUS)
+			if (pCurrentCommandID == DayZPlayerConstants.COMMANDID_UNCONSCIOUS)
 			{
-				if ( (m_LastCommandBeforeUnconscious == DayZPlayerConstants.COMMANDID_VEHICLE) && (m_TransportCache != null))
+				if ((m_LastCommandBeforeUnconscious == DayZPlayerConstants.COMMANDID_VEHICLE) && (m_TransportCache != null))
 				{
 					int crew_index = m_TransportCache.CrewMemberIndex(this);
 					int seat = m_TransportCache.GetSeatAnimationType(crew_index);
@@ -2070,12 +2080,12 @@ class DayZPlayerImplement extends DayZPlayer
 			if (PhysicsIsFalling(true))
 			{
 				StartCommand_Fall(0);
-				m_FallYDiff = GetPosition()[1];
+				SetFallYDiff(GetPosition()[1]);
 				return;
 			}
 
-			//! default behaviou after finish is to start move
-			if ( m_Swimming.m_bWasSwimming )
+			//! default behaviour after finish is to start move
+			if (m_Swimming.m_bWasSwimming)
 			{
 				StartCommand_Swim();
 				return;
@@ -2083,8 +2093,8 @@ class DayZPlayerImplement extends DayZPlayer
 
 			StartCommand_Move();
 			
-			if ( GetHumanInventory().GetEntityInHands() )
-				ForceStandUpForHeavyItems( GetHumanInventory().GetEntityInHands() );
+			if (GetHumanInventory().GetEntityInHands())
+				ForceStandUpForHeavyItems(GetHumanInventory().GetEntityInHands());
 			
 			return;
 		}
@@ -2104,7 +2114,7 @@ class DayZPlayerImplement extends DayZPlayer
 		if (pCurrentCommandID == DayZPlayerConstants.COMMANDID_VEHICLE)
 		{
 			HumanCommandVehicle hcv = GetCommand_Vehicle();
-			if ( hcv.WasGearChange() )
+			if (hcv.WasGearChange())
 			{
 				GearChangeActionCallback cb = GearChangeActionCallback.Cast(AddCommandModifier_Action(DayZPlayerConstants.CMD_ACTIONMOD_SHIFTGEAR, GearChangeActionCallback));
 				cb.SetVehicleCommand(hcv);
@@ -2112,15 +2122,18 @@ class DayZPlayerImplement extends DayZPlayer
 			
 			return;
 		}
-
+		
 		//! Sprint attack limiting - player has to be in full sprint for at least 0.5s
 		//--------------------------------------------
 		HumanCommandMove hcm = GetCommand_Move();
 		if (hcm && hcm.GetCurrentMovementSpeed() > 2.99 && m_MovementState.m_iMovement == DayZPlayerConstants.MOVEMENTIDX_SPRINT)
 		{
 			m_SprintedTime += pDt;
-			if ( m_SprintedTime > 0.5)
+			if (m_SprintedTime > m_SprintedTimePerStanceMin)
+			{
 				m_SprintFull = true;
+				m_SprintedTimePerStanceMin = PlayerConstants.FULL_SPRINT_DELAY_DEFAULT;
+			}
 			else
 				m_SprintFull = false;
 		}
@@ -2156,72 +2169,70 @@ class DayZPlayerImplement extends DayZPlayer
 		//--------------------------------------------
 		// fall handling
 
-		if (pCurrentCommandID == DayZPlayerConstants.COMMANDID_FALL)
+		if (IsAlreadyInFallingCommand(pCurrentCommandID))
 		{
-			// vector	vel;
-			// PhysicsGetVelocity(vel);
-			// Print(vel);
-
-			int landType = 0;
-			HumanCommandFall fall = GetCommand_Fall();
-
-			if (fall.PhysicsLanded())
+			if (IsLanded(pCurrentCommandID))
 			{
 				DayZPlayerType type = GetDayZPlayerType();
 				NoiseParams npar;
 
+				FallDamageData fallDamageData = new FallDamageData();
+				fallDamageData.m_Height = m_FallYDiff - GetPosition()[1];
+
 				// land
-				m_FallYDiff = m_FallYDiff - GetPosition()[1];
-				if (m_FallYDiff < 0.5)
+				if (fallDamageData.m_Height < 0.5)
 				{
-					landType = HumanCommandFall.LANDTYPE_NONE; 
-					fall.Land(landType);
+					fallDamageData.m_LandType = HumanCommandFall.LANDTYPE_NONE; 
+					OnLand(pCurrentCommandID, fallDamageData);
 					npar = type.GetNoiseParamsLandLight();
 					AddNoise(npar);
 				}
-				else if (m_FallYDiff < 1.0)
+				else if (fallDamageData.m_Height < 3.0)
 				{
 					if (m_MovementState.IsInProne() || m_MovementState.IsInRaisedProne())
-						landType = HumanCommandFall.LANDTYPE_NONE;
+						fallDamageData.m_LandType = HumanCommandFall.LANDTYPE_NONE;
 					else
-						landType = HumanCommandFall.LANDTYPE_LIGHT;
+						fallDamageData.m_LandType = HumanCommandFall.LANDTYPE_LIGHT;
 					
-					fall.Land(landType);
+					OnLand(pCurrentCommandID, fallDamageData);
 					npar = type.GetNoiseParamsLandLight();
 					AddNoise(npar);
 				}
-				else if (m_FallYDiff < 2.0)
+				else if (fallDamageData.m_Height < 5.0)
 				{
-					landType = HumanCommandFall.LANDTYPE_MEDIUM;
-					fall.Land(landType);
+					fallDamageData.m_LandType = HumanCommandFall.LANDTYPE_MEDIUM;
+					OnLand(pCurrentCommandID, fallDamageData);
 					npar = type.GetNoiseParamsLandHeavy();
 					AddNoise(npar);
 				}
 				else
 				{
-					landType = HumanCommandFall.LANDTYPE_HEAVY;
-					fall.Land(landType);
+					fallDamageData.m_LandType = HumanCommandFall.LANDTYPE_HEAVY;
+					OnLand(pCurrentCommandID, fallDamageData);
 					npar = type.GetNoiseParamsLandHeavy();
 					AddNoise(npar);
 				}
 				
-				if ( m_FallYDiff >= DayZPlayerImplementFallDamage.FD_DMG_FROM_HEIGHT && GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_CLIENT )
+				if (fallDamageData.m_Height >= DayZPlayerImplementFallDamage.HEALTH_HEIGHT_LOW && GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_CLIENT)
 				{
 					OnPlayerRecievedHit();
 				}
-				
-				m_FallDamage.HandleFallDamage(m_FallYDiff);
-				m_JumpClimb.CheckAndFinishJump(landType);
+
+				m_FallDamage.HandleFallDamage(fallDamageData);
+				m_JumpClimb.CheckAndFinishJump(fallDamageData.m_LandType);
 			}
 
-			return;
+			//! If we are not in fall command then something else is currently running and we can safely continue here, otherwise terminate here
+			if (pCurrentCommandID == DayZPlayerConstants.COMMANDID_FALL)
+			{
+				return;
+			}
 		}
-
-		// start falling ? 
-		if (PhysicsIsFalling(false))
+		else if (PhysicsIsFalling(false)) 
 		{
+			// Not in a falling command but the controller is falling, start default fall
 			StartCommand_Fall(0);
-			m_FallYDiff = GetPosition()[1];
+			SetFallYDiff(GetPosition()[1]);
 			return;
 		}
 
@@ -2254,7 +2265,11 @@ class DayZPlayerImplement extends DayZPlayer
 		if (hic.IsJumpClimb())
 		{
 			m_JumpClimb.JumpOrClimb();
-			return;
+
+			if (m_JumpClimb.WasSuccessful())
+			{
+				return;
+			}
 		}
 
 		HumanCommandAdditives ad = GetCommandModifier_Additives();
@@ -2268,16 +2283,16 @@ class DayZPlayerImplement extends DayZPlayer
 #endif 
 		float amplitude = IsPlayerSpeaking();
 		
-		if ( amplitude > 0.1 || force )
+		if (amplitude > 0.1 || force)
 		{	
-			if ( ad )
+			if (ad)
 				ad.SetTalking(true);
 			
 			// add noises on server
-			if ( GetGame().IsServer() )
+			if (GetGame().IsServer())
 			{
 				int now = GetGame().GetTime();
-				if ( now >= m_NextVoNNoiseTime )
+				if (now >= m_NextVoNNoiseTime)
 				{
 					m_NextVoNNoiseTime = now + 1000;
 					
@@ -2286,7 +2301,7 @@ class DayZPlayerImplement extends DayZPlayer
 					
 					// add noise every second while talking 
 					NoiseParams vonpar;
-					switch ( voiceLevel )
+					switch (voiceLevel)
 					{
 						case VoiceLevelWhisper:
 							vonpar = pt.GetNoiseParamsWhisper();
@@ -2304,7 +2319,7 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 		else
 		{
-			if ( ad )
+			if (ad)
 				ad.SetTalking(false);
 		}
 		
@@ -2353,39 +2368,6 @@ class DayZPlayerImplement extends DayZPlayer
 	//! 
 	void  CommandHandlerDebug(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
 	{
-
-		//! 
-		/*
-		// debug - print ironsights pos / dir
-
-		HumanItemAccessor hia = GetItemAccessor();
-
-		vector pos, dir;
-
-		if (hia.WeaponGetCameraPoint(pos, dir))
-		{
-			string 	a = "ITACC: ";
-			a += pos.ToString();
-			a += " ";
-			a += dir.ToString();
-
-		//Print("DayZPlayerImplement: Init");
-
-			Print(a);
-		}
-		*/
-
-		/* {
-			HumanCommandMove mc = GetCommand_Move();
-			if (mc)
-			{
-
-				float gcms = mc.GetCurrentMovementSpeed();
-				Print(gcms);
-			}
-		} */
-
-		//! 
 		if (GetPluginManager())
 		{
 			PluginDayzPlayerDebug playerDebug = PluginDayzPlayerDebug.Cast(GetPluginManager().GetPluginByType(PluginDayzPlayerDebug));
@@ -2402,7 +2384,7 @@ class DayZPlayerImplement extends DayZPlayer
 
 					if (playerDebug.IsWeaponChange(m_DebugWeaponChangeItem, hideSlot, m_DebugWeaponChangeShowSlot))
 					{
-						Print("Change Weapon started: " + m_DebugWeaponChangeItem + "," + hideSlot.ToString() + "," + m_DebugWeaponChangeShowSlot.ToString());
+						//Print("Change Weapon started: " + m_DebugWeaponChangeItem + "," + hideSlot.ToString() + "," + m_DebugWeaponChangeShowSlot.ToString());
 
 						HumanCommandWeapons	w = GetCommandModifier_Weapons();
 						w.StartAction(WeaponActions.HIDE, hideSlot);
@@ -2419,7 +2401,7 @@ class DayZPlayerImplement extends DayZPlayer
 						if (w2.IsEvent() == WeaponEvents.CHANGE_HIDE)
 						{
 							//! set item in hands
-							Print("Change Weapon - hidden: ");
+							//Print("Change Weapon - hidden: ");
 
 							//! fuj
 							PlayerBase player = PlayerBase.Cast(this);
@@ -2433,7 +2415,7 @@ class DayZPlayerImplement extends DayZPlayer
 							{
 								InventoryLocation dst = new InventoryLocation;
 								dst.SetHands(this, NULL);
-								EntityAI item = GetGame().SpawnEntity(m_DebugWeaponChangeItem, dst,ECE_IN_INVENTORY,RF_DEFAULT);
+								EntityAI item = SpawnEntity(m_DebugWeaponChangeItem, dst,ECE_IN_INVENTORY,RF_DEFAULT);
 							}
 
 							//! start show
@@ -2521,29 +2503,29 @@ class DayZPlayerImplement extends DayZPlayer
 	//! 
 	override int 	CameraHandler(int pCameraMode)
 	{
-		// Print("DayZPlayerCfgBase: Camera Handler called");
-
-		/* {
-			int perItemCamUD = GetCurrentPerItemCameraUD();
-			string 		a	= "Per Item Camera User Data: " + ToString(perItemCamUD);
-			Print(a);
-		} */
 		//! ironsights
 		if (!m_LiftWeapon_player)
 		{
-			if (m_CameraIronsight)
+			ItemOptics optics = null;
+			EntityAI entityInHands = GetHumanInventory().GetEntityInHands();
+			Weapon weapon = Weapon.Cast(entityInHands);
+			if (weapon)
+				optics = weapon.GetAttachedOptics();
+			else if (entityInHands)
+				Class.CastTo(optics,entityInHands);
+			
+			if (m_CameraOptics && optics)
 			{
-				if (m_CameraOptics)
-					return DayZPlayerCameras.DAYZCAMERA_OPTICS;
-				else
-					return DayZPlayerCameras.DAYZCAMERA_IRONSIGHTS;
-			}
-			else if (m_CameraOptics)
 				return DayZPlayerCameras.DAYZCAMERA_OPTICS;
+			}
+			else if (m_CameraIronsight && weapon)
+			{
+				return DayZPlayerCameras.DAYZCAMERA_IRONSIGHTS;
+			}
 		}
 		
 		//uncon
-		if ( m_IsUnconscious )
+		if (m_IsUnconscious)
 		{
 			return DayZPlayerCameras.DAYZCAMERA_1ST_UNCONSCIOUS;
 		}
@@ -2552,7 +2534,7 @@ class DayZPlayerImplement extends DayZPlayer
 		
 		if (!m_Camera3rdPerson)
 		{
-			if ( vehicleCommand )
+			if (vehicleCommand)
 			{
 				return DayZPlayerCameras.DAYZCAMERA_1ST_VEHICLE;
 			}
@@ -2561,7 +2543,7 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 		else
 		{
-			if ( vehicleCommand )
+			if (vehicleCommand)
 			{
 				Transport transport = vehicleCommand.GetTransport();
 				if (transport && GetParent())
@@ -2586,7 +2568,7 @@ class DayZPlayerImplement extends DayZPlayer
 				return DayZPlayerCameras.DAYZCAMERA_3RD_CLIMB;
 			}
 
-			if ( m_JumpClimb.m_bIsJumpInProgress )
+			if (m_JumpClimb.m_bIsJumpInProgress)
 			{
 				return DayZPlayerCameras.DAYZCAMERA_3RD_JUMP;
 			}
@@ -2707,7 +2689,7 @@ class DayZPlayerImplement extends DayZPlayer
 	
 	void OnSprintStart()
 	{
-		if ( GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_CLIENT )
+		if (GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_CLIENT)
 		{
 			GetUApi().GetInputByID(UALeanLeft).Lock();
 			GetUApi().GetInputByID(UALeanRight).Lock();
@@ -2716,7 +2698,7 @@ class DayZPlayerImplement extends DayZPlayer
 	
 	void OnSprintEnd()
 	{
-		if ( GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_CLIENT )
+		if (GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_CLIENT)
 		{
 			GetUApi().GetInputByID(UALeanLeft).Unlock();
 			GetUApi().GetInputByID(UALeanRight).Unlock();
@@ -2782,25 +2764,21 @@ class DayZPlayerImplement extends DayZPlayer
 	//!
 	//! SyncJunctures
 	//! 
-
 	void OnSyncJuncture(int pJunctureID, ParamsReadContext pCtx)
 	{
 		switch (pJunctureID)
 		{
 			case DayZPlayerSyncJunctures.SJ_DEATH:
-				if( m_DeathAnimType == -2 )
+				if (m_DeathAnimType == -2)
 					DayZPlayerSyncJunctures.ReadDeathParams(pCtx, m_DeathAnimType, m_DeathHitDir);
 				break;
 				
 			case DayZPlayerSyncJunctures.SJ_DAMAGE_HIT:
 				SyncHitInfo data = new SyncHitInfo;
-				if ( DayZPlayerSyncJunctures.ReadDamageHitParamsEx(pCtx, data) && data != null)
+				if (DayZPlayerSyncJunctures.ReadDamageHitParamsEx(pCtx, data) && data != null)
 				{
 					m_SyncedHitDataArray.Insert(data);
 				}
-				break;
-			case DayZPlayerSyncJunctures.SJ_WEAPON_RAISE_COMPLETED:
-				m_ProcessWeaponRaiseCompleted = true;
 				break;
 		}
 	}
@@ -2808,9 +2786,9 @@ class DayZPlayerImplement extends DayZPlayer
 	AnimBootsType GetBootsType()
 	{
 		EntityAI boots = GetInventory().FindAttachment(InventorySlots.FEET);
-		if(boots)
+		if (boots)
 		{
-			switch( boots.GetAttachmentSoundType() )
+			switch (boots.GetAttachmentSoundType())
 			{
 				case "Sneakers":
 					return AnimBootsType.Sneakers;
@@ -2826,9 +2804,9 @@ class DayZPlayerImplement extends DayZPlayer
 	AnimUpperBodyType GetBodyAttachmentType()
 	{
 		EntityAI attachment = GetInventory().FindAttachment(InventorySlots.BODY);
-		if(attachment)
+		if (attachment)
 		{
-			switch( attachment.GetAttachmentSoundType() )
+			switch (attachment.GetAttachmentSoundType())
 			{
 				case "NylonJacket":
 					return AnimUpperBodyType.NylonJacket;
@@ -2846,6 +2824,8 @@ class DayZPlayerImplement extends DayZPlayer
 					return AnimUpperBodyType.ChemlonDress;
 				case "Ghillie":
 					return AnimUpperBodyType.Ghillie;
+				case "Chainmail":
+					return AnimUpperBodyType.Chainmail;
 			}
 		}
 		
@@ -2855,9 +2835,9 @@ class DayZPlayerImplement extends DayZPlayer
 	AnimBackType GetBackAttachmentType()
 	{
 		EntityAI back = GetInventory().FindAttachment(InventorySlots.BACK);
-		if(back)
+		if (back)
 		{
-			switch( back.GetAttachmentSoundType() )
+			switch (back.GetAttachmentSoundType())
 			{
 				case "Small":
 					return AnimBackType.Small;
@@ -2882,9 +2862,9 @@ class DayZPlayerImplement extends DayZPlayer
 		AnimRangedWeaponType shoulderAttType = AnimRangedWeaponType.None;
 		AnimRangedWeaponType meleeAttType = AnimRangedWeaponType.None;
 		
-		if(shoulderAttachment)
+		if (shoulderAttachment)
 		{
-			switch( shoulderAttachment.GetAttachmentSoundType())
+			switch (shoulderAttachment.GetAttachmentSoundType())
 			{
 				case "Shotgun":
 				{
@@ -2898,9 +2878,9 @@ class DayZPlayerImplement extends DayZPlayer
 				}
 			}
 		}
-		if(meleeAttachment)
+		if (meleeAttachment)
 		{
-			switch( meleeAttachment.GetAttachmentSoundType())
+			switch (meleeAttachment.GetAttachmentSoundType())
 			{
 				case "Shotgun":
 				{
@@ -2915,10 +2895,10 @@ class DayZPlayerImplement extends DayZPlayer
 			}
 		}
 		
-		if(shoulderAttType == AnimRangedWeaponType.Shotgun || meleeAttType == AnimRangedWeaponType.Shotgun)
+		if (shoulderAttType == AnimRangedWeaponType.Shotgun || meleeAttType == AnimRangedWeaponType.Shotgun)
 			return AnimRangedWeaponType.Shotgun;
 		
-		if(shoulderAttType == AnimRangedWeaponType.Rifle || meleeAttType == AnimRangedWeaponType.Rifle)
+		if (shoulderAttType == AnimRangedWeaponType.Rifle || meleeAttType == AnimRangedWeaponType.Rifle)
 			return AnimRangedWeaponType.Rifle;
 
 		return AnimRangedWeaponType.None;
@@ -2962,12 +2942,6 @@ class DayZPlayerImplement extends DayZPlayer
 
 	void OnStepEvent(string pEventType, string pUserString, int pUserInt)
 	{
-		/*
-		Print(pEventType);
-		Print(pUserString);
-		Print(pUserInt);
-		Print("-----------------------------");
-		*/
 		DayZPlayerType type = GetDayZPlayerType();
 		ref HumanMovementState	state = new HumanMovementState();
 		GetMovementState(state);
@@ -3099,10 +3073,10 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 		else if (pEventType == "SoundVoice")
 		{
-			if( GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_CLIENT || GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_REMOTE )
+			if (GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_CLIENT || GetInstanceType() == DayZPlayerInstanceType.INSTANCETYPE_REMOTE)
 			{
 				int event_id = m_PlayerSoundEventHandler.ConvertAnimIDtoEventID(pUserInt);
-				if( event_id > 0 )
+				if (event_id > 0)
 				{
 					PlaySoundEvent(event_id);
 					return;
@@ -3125,57 +3099,54 @@ class DayZPlayerImplement extends DayZPlayer
 	void ProcessWeaponEvent(string pEventType, string pUserString, int pUserInt)
 	{
 		DayZPlayerType type = GetDayZPlayerType();
-		AnimSoundEvent soundEvent = NULL;
+		AnimSoundEvent soundEvent = null;
 
 		float quantity = 0;
 		
 		EntityAI entityInHands = GetHumanInventory().GetEntityInHands();
-		if (entityInHands != NULL && entityInHands.IsInherited(ItemBase))
+		if (entityInHands && entityInHands.IsInherited(ItemBase))
 		{
 			ItemBase item;
 			Class.CastTo(item, entityInHands);
-			if(item.HasQuantity())
+			if (item.HasQuantity())
 				quantity = (float)item.GetQuantity() / (item.GetQuantityMax() - item.GetQuantityMin());
 			InventoryItemType invItemType = item.GetInventoryItemType();
 			soundEvent = invItemType.GetSoundEvent(pUserInt);
 		}
 
-		if (soundEvent == NULL)
+		if (soundEvent == null)
 		{
 			quantity = 0;
 			soundEvent = type.GetSoundWeaponEvent(pUserInt);
 		}
 
-		if (soundEvent != NULL)
+		if (soundEvent != null)
 		{
-			if(!GetGame().IsDedicatedServer())
+			if (!GetGame().IsDedicatedServer())
 			{
-				SoundObjectBuilder builder = soundEvent.GetSoundBuilder();
-				builder.SetVariable("quantity", quantity);
-				builder.SetVariable("interior", IsSoundInsideBuilding());
-				
-				SoundObject soundObject = builder.BuildSoundObject();
-				if (soundObject != NULL)
+				SoundObjectBuilder builder = soundEvent.GetSoundBuilderEx(m_ActionSoundCategoryHash);
+				if (builder)
 				{
-					AttenuateSoundIfNecessary(soundObject);
-					PlaySound(soundObject, builder);
+					builder.AddVariable("quantity", quantity);
+					builder.AddVariable("interior", IsSoundInsideBuilding());
+					
+					SoundObject soundObject = builder.BuildSoundObject();
+					if (soundObject != NULL)
+					{
+						AttenuateSoundIfNecessary(soundObject);
+						PlaySound(soundObject, builder);
+					}
+				}
+				else
+				{
+					//TODO:Userful error message
 				}
 			}
 			
-			if(GetGame().IsServer())
+			if (GetGame().IsServer())
 			{
 				AddNoise(soundEvent.m_NoiseParams);
 			}
-		}
-		else
-		{
-			//commented out, some events in animation should be processed only when some items are in hand
-			//string className;
-			//if (entityInHands != NULL)
-			//	className = entityInHands.GetType();
-			//else
-			//	className = "SurvivorBase";
-			//Print("OnSoundEvent: eventType: \"SoundWeapon\", Not defined event id: " + pUserInt + ", in class \"" + className + "\"");
 		}
 	}
 
@@ -3186,14 +3157,14 @@ class DayZPlayerImplement extends DayZPlayer
 			
 		array<string> attachments = new array<string>();
 		pUserString.Split(",", attachments);
-		for(int i = 0; i < attachments.Count(); i++)
+		for (int i = 0; i < attachments.Count(); i++)
 		{
 			int attachmentHash = -1;
-			if( attachments[i] == "shoulder" )
+			if (attachments[i] == "shoulder")
 				attachmentHash = GetShoulderAttachmentType();
-			else if( attachments[i] == "body" )
+			else if (attachments[i] == "body")
 				attachmentHash = GetBodyAttachmentType();
-			else if( attachments[i] == "back" )
+			else if (attachments[i] == "back")
 				attachmentHash = GetBackAttachmentType();
 			
 			SoundObjectBuilder soundBuilder = table.GetSoundBuilder(pUserInt, attachments[i], attachmentHash);
@@ -3214,32 +3185,32 @@ class DayZPlayerImplement extends DayZPlayer
 	{
 		if (m_ClimbingLadderType == "wood")
 		{
-			soundObjectBuilder.SetVariable("laddertype", 1);
+			soundObjectBuilder.AddVariable("laddertype", 1);
 		}
 		else
 		{
-			soundObjectBuilder.SetVariable("laddertype", 0);
+			soundObjectBuilder.AddVariable("laddertype", 0);
 		}
 		
 		AnimBootsType pBoots = GetBootsType();
 		
 		if (pBoots == AnimBootsType.None)
 		{
-			soundObjectBuilder.SetVariable("bare", 1);
-			soundObjectBuilder.SetVariable("sneakers", 0);
-			soundObjectBuilder.SetVariable("boots", 0);
+			soundObjectBuilder.AddVariable("bare", 1);
+			soundObjectBuilder.AddVariable("sneakers", 0);
+			soundObjectBuilder.AddVariable("boots", 0);
 		}
 		else if (pBoots == AnimBootsType.Sneakers)
 		{
-			soundObjectBuilder.SetVariable("bare", 0);
-			soundObjectBuilder.SetVariable("sneakers", 1);
-			soundObjectBuilder.SetVariable("boots", 0);
+			soundObjectBuilder.AddVariable("bare", 0);
+			soundObjectBuilder.AddVariable("sneakers", 1);
+			soundObjectBuilder.AddVariable("boots", 0);
 		}
 		else if (pBoots == AnimBootsType.Boots)
 		{
-			soundObjectBuilder.SetVariable("bare", 0);
-			soundObjectBuilder.SetVariable("sneakers", 0);
-			soundObjectBuilder.SetVariable("boots", 1);
+			soundObjectBuilder.AddVariable("bare", 0);
+			soundObjectBuilder.AddVariable("sneakers", 0);
+			soundObjectBuilder.AddVariable("boots", 1);
 		}
 	}
 
@@ -3248,21 +3219,21 @@ class DayZPlayerImplement extends DayZPlayer
 		DayZPlayerType type = GetDayZPlayerType();
 		DayZPlayerTypeAnimTable table = type.GetSoundTable();
 		AnimSoundEvent soundEvent;
-		if( table )
+		if (table)
 		{
 			soundEvent = table.GetSoundEvent(pUserInt);
 		}
 		
-		if(soundEvent != NULL)
+		if (soundEvent != NULL)
 		{
-			if(!GetGame().IsDedicatedServer())
+			if (!GetGame().IsDedicatedServer())
 			{
 				SoundObjectBuilder objectBuilder = soundEvent.GetSoundBuilder();
 				if (GetCommand_Ladder())
 				{
 					SetVariablesLadderSoundObjectBuilder(objectBuilder);
 				}
-				objectBuilder.UpdateEnvSoundControllers(GetPosition());
+				objectBuilder.AddEnvSoundVariables(GetPosition());
 
 				SoundObject soundObject = objectBuilder.BuildSoundObject();
 				if (soundObject != NULL)
@@ -3272,9 +3243,9 @@ class DayZPlayerImplement extends DayZPlayer
 				}
 			}
 			
-			if(GetGame().IsServer())
+			if (GetGame().IsServer())
 			{
-				if(soundEvent.m_NoiseParams != NULL)
+				if (soundEvent.m_NoiseParams != NULL)
 					GetGame().GetNoiseSystem().AddNoise(this, soundEvent.m_NoiseParams);
 			}
 		}
@@ -3289,14 +3260,14 @@ class DayZPlayerImplement extends DayZPlayer
 		#endif
 		DayZPlayerType type = GetDayZPlayerType();
 		DayZPlayerTypeVoiceSoundLookupTable table = type.GetVoiceSoundLookupTable();
-		if(!table)
+		if (!table)
 			return null;
 		AbstractWave wave;
 		EntityAI mask = GetInventory().FindAttachment(InventorySlots.MASK);
 		EntityAI head_gear = GetInventory().FindAttachment(InventorySlots.HEADGEAR);
 		
 		string category;
-		if( mask || head_gear )
+		if (mask || head_gear)
 		{
 			string category_mask;
 			string category_headgear;
@@ -3304,18 +3275,18 @@ class DayZPlayerImplement extends DayZPlayer
 			int priority_mask;
 			int priority_headgear;
 			
-			if(mask)
+			if (mask)
 			{
 				category_mask = mask.ConfigGetString("soundVoiceType");
 				priority_mask = mask.ConfigGetInt("soundVoicePriority");
 			}
-			if(head_gear)
+			if (head_gear)
 			{
 				category_headgear = head_gear.ConfigGetString("soundVoiceType");
 				priority_headgear = head_gear.ConfigGetInt("soundVoicePriority");
 			}
 			
-			if(priority_headgear >= priority_mask && category_headgear != "")
+			if (priority_headgear >= priority_mask && category_headgear != "")
 			{
 				category = category_headgear;
 			}
@@ -3325,7 +3296,7 @@ class DayZPlayerImplement extends DayZPlayer
 			}
 		}
 
-		if(category == "")
+		if (category == "")
 		{
 			category = "none";
 		}
@@ -3338,7 +3309,7 @@ class DayZPlayerImplement extends DayZPlayer
 			//this code block looks super shady, but it's the only way the sounds play correctly, god knows what's going on on c++ side
 			int maleVoiceType = 0;
 			int femaleVoiceType = 0;
-			if(player.IsMale())
+			if (player.IsMale())
 			{
 				maleVoiceType = player.GetVoiceType();
 			}
@@ -3347,8 +3318,8 @@ class DayZPlayerImplement extends DayZPlayer
 				femaleVoiceType = player.GetVoiceType();
 			}
 
-			soundBuilder.SetVariable("male", maleVoiceType);
-			soundBuilder.SetVariable("female", femaleVoiceType);
+			soundBuilder.AddVariable("male", maleVoiceType);
+			soundBuilder.AddVariable("female", femaleVoiceType);
 			
 			// end of weirdness
 			SoundObject soundObject = soundBuilder.BuildSoundObject();
@@ -3423,7 +3394,6 @@ class DayZPlayerImplement extends DayZPlayer
 			Print("ERPCs.RPC_DAYZPLAYER_DEBUGSERVERWALK");
 
 			Param1<bool> rp = new Param1<bool>(false);
-
 			ctx.Read(rp);
 
 			GetInputController().OverrideMovementSpeed(rp.param1, 1);
@@ -3433,6 +3403,42 @@ class DayZPlayerImplement extends DayZPlayer
 	}
 
 #endif
+
+	bool IsLanded(int pCurrentCommandID)
+	{
+		if (pCurrentCommandID == DayZPlayerConstants.COMMANDID_FALL)
+		{
+			HumanCommandFall fall = GetCommand_Fall();
+
+			if (fall)
+			{
+				return fall.PhysicsLanded();
+			}
+		}
+		
+		return false;
+	}
+
+	bool OnLand(int pCurrentCommandID, FallDamageData fallDamageData)
+	{
+		if (pCurrentCommandID == DayZPlayerConstants.COMMANDID_FALL)
+		{
+			HumanCommandFall fall = GetCommand_Fall();
+
+			if (fall)
+			{
+				fall.Land(fallDamageData.m_LandType);
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool IsAlreadyInFallingCommand(int pCurrentCommandID)
+	{
+		return pCurrentCommandID == DayZPlayerConstants.COMMANDID_FALL;
+	}
 	
 	//! movement sliding override, originally for FB gestures
 	void OverrideSlidePoseAngle(float value)
@@ -3441,8 +3447,6 @@ class DayZPlayerImplement extends DayZPlayer
 			m_MoveSettings = GetDayZPlayerType().CommandMoveSettingsW();
 		if (m_MoveSettings.m_fSlidingPoseAngle != value)
 		{
-			//Print("Change from: " + m_MoveSettings.m_fSlidingPoseAngle);
-			//Print("Change to: " + value);
 			m_MoveSettings.m_fSlidingPoseAngle = value;
 			StartCommand_Move(); //nescessary, re-initializes with adjusted values
 		}
@@ -3487,16 +3491,16 @@ class DayZPlayerImplement extends DayZPlayer
 	
 	override protected void EOnContact(IEntity other, Contact extra)
 	{
-		if( !IsAlive() )
+		if (!IsAlive())
 			return;
 		
-		if( GetParent() == other )
+		if (GetParent() == other)
 			return;
 
 		Transport transport = Transport.Cast(other);
-		if( transport )
+		if (transport)
 		{
-			if ( GetGame().IsServer() )
+			if (GetGame().IsServer())
 			{
 				RegisterTransportHit(transport);
 			}
@@ -3515,8 +3519,8 @@ class DayZPlayerImplement extends DayZPlayer
 		}
 	}
 	
-	void CheckLiftWeapon() {};
-	void ProcessLiftWeapon() {};
+	void CheckLiftWeapon();
+	void ProcessLiftWeapon();
 	
 	void SetHandheldOpticsInUse(bool state)
 	{
@@ -3547,13 +3551,24 @@ class DayZPlayerImplement extends DayZPlayer
 	{
 		return CanPickupHeavyItem(item1) && CanPickupHeavyItem(item2);
 	}
+
+#ifdef DIAG_DEVELOPER
+	Weapon_Base SpawnWeaponInHands(string type)
+	{
+		return Weapon_Base.Cast(GetHumanInventory().CreateInHands(type));
+	}
+#endif
 	
 ///////////////////////////////////
 //Obsolete stuff below this point//
 ///////////////////////////////////
 	
-	//! DEPRECATED
-	void SetReturnToOptics(bool state)
-	{
-	}
+	protected bool										m_CameraEyeZoom; //DEPRECATED
+	ref Timer 											m_ADSAutomationTimer; //DEPRECATED
+	protected bool 										m_ADSTimerLaunched; //DEPRECATED
+	protected bool 										m_ProcessWeaponRaiseCompleted; //DEPRECATED
+	protected bool										m_IsFireWeaponRaised; //DEPRECATED, value still set for legacy reasons
+	void SetReturnToOptics(bool state); //DEPRECATED
+	void RunADSTimer(); //DEPRECATED
+	void StopADSTimer(); //DEPRECATED
 }

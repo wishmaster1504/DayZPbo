@@ -1,0 +1,15 @@
+MetaFileClass {
+ Name "{3E3B5AA16932182E}Graphics/Particles/materials/enviroment/bubbles_01_em.emat"
+ Author "3643"
+ ChangeDate -1543246219
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass LINUX : PC {
+  }
+ }
+}

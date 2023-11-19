@@ -321,7 +321,7 @@ WindowWidgetClass server_browser_tab_root {
          }
         }
         FrameWidgetClass server_list_content_header_time {
-         visible 0
+         visible 1
          ignorepointer 0
          position 0 0
          size 90 1
@@ -377,7 +377,7 @@ WindowWidgetClass server_browser_tab_root {
          }
         }
         FrameWidgetClass server_list_content_header_slots {
-         visible 1
+         visible 0
          ignorepointer 0
          position 0 0
          size 120 1

@@ -41,6 +41,7 @@ PanelWidgetClass GridBck {
        visible 1
        inheritalpha 0
        ignorepointer 1
+       ignoregloballv 0
        size 18 18
        halign center_ref
        valign center_ref
@@ -93,6 +94,7 @@ PanelWidgetClass GridBck {
        visible 1
        inheritalpha 0
        ignorepointer 1
+       ignoregloballv 1
        color 1 1 1 0.7843
        size 18 18
        halign center_ref

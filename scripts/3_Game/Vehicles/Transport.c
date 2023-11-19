@@ -56,8 +56,7 @@ class Transport extends EntityAI
 	
 	//! Handles death of player in vehicle and awakes its physics if needed
 	proto native void CrewDeath( int posIdx );
-
-
+	
 	override bool IsTransport()
 	{
 		return true;
@@ -78,11 +77,26 @@ class Transport extends EntityAI
 		return true;
 	}
 	
+	bool IsAnyCrewPresent()
+	{
+		for (int index = 0; index < CrewSize(); ++index)
+		{
+			if (CrewMember(index) != null)
+				return true;
+		}
+		
+		return false;
+	}
+	
 	float GetTransportCameraDistance()
 	{
 		return 4.0;
 	}
 	
+	void MarkCrewMemberUnconscious(int crewMemberIndex);
+	void MarkCrewMemberDead(int crewMemberIndex);
+	protected void HandleByCrewMemberState(ECrewMemberState state);
+
 	vector GetTransportCameraOffset()
 	{
 		return "0 1.3 0";
@@ -90,40 +104,66 @@ class Transport extends EntityAI
 	
 	int GetAnimInstance()
 	{
+#ifndef CFGMODS_DEFINE_TEST
 		Error("GetAnimInstance() not implemented");
 		return 0;
+#else
+		return 2;
+#endif
 	}
 
 	int GetSeatAnimationType( int posIdx )
 	{
+#ifndef CFGMODS_DEFINE_TEST
 		Error("GetSeatAnimationType() not implemented");
+#endif
 		return 0;
 	}
 
 	int Get3rdPersonCameraType()
 	{
+#ifndef CFGMODS_DEFINE_TEST
 		Error("Get3rdPersonCameraType() not implemented");
 		return 0;
+#else
+		return 31;
+#endif
 	}
 	
 	bool CrewCanGetThrough( int posIdx )
 	{
+#ifndef CFGMODS_DEFINE_TEST
 		return false;
+#else
+		return true;
+#endif
 	}
 	
 	bool CanReachSeatFromSeat( int currentSeat, int nextSeat )
 	{
+#ifndef CFGMODS_DEFINE_TEST
 		return false;
+#else
+		return true;
+#endif
 	}
 	
 	bool CanReachSeatFromDoors( string pSeatSelection, vector pFromPos, float pDistance = 1.0 )
 	{
-		return false;		
+#ifndef CFGMODS_DEFINE_TEST
+		return false;
+#else
+		return true;
+#endif	
 	}
 
 	bool CanReachDoorsFromSeat( string pDoorsSelection, int pCurrentSeat )
 	{
+#ifndef CFGMODS_DEFINE_TEST
 		return false;
+#else
+		return true;
+#endif
 	}
 	
 	int GetSeatIndexFromDoor( string pDoorSelection )
